@@ -21,7 +21,7 @@ mne.viz.plot_head_positions(head_pos, mode='traces',
 raw = mne.chpi.filter_chpi(raw)
 raw.fix_mag_coil_types()
 if not op.isfile(raw_fname[:-4] + '-sss.fif'):
-    raw_sss = maxwell_filter(raw, head_pos=head_pos, st_duration=10)
+    raw_sss = maxwell_filter(raw, head_pos=head_pos, st_duration=300)
     raw_sss.save(raw_fname[:-4] + '_sss.fif')
 else:
     raw_sss = mne.io.read_raw_fif(raw_fname[:-4] + '-sss.fif')
