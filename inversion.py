@@ -8,12 +8,12 @@ import os.path as op
 import numpy as np
 import mne
 from mne import EvokedArray
-from mne.minimum_norm import apply_inverse, make_inverse_operator
+from mne.minimum_norm import (apply_inverse, make_inverse_operator)
 from mne.inverse_sparse.mxne_inverse import _prepare_gain
 
 # Set parameters
 data_path = op.join(mne.datasets.sample.data_path(), 'MEG', 'sample')
-subjects_dir = op.join(data_path, 'subjects')
+subjects_dir = op.join(mne.datasets.sample.data_path(), 'subjects')
 raw_fname = op.join(data_path, 'sample_audvis_filt-0-40_raw.fif')
 event_fname = op.join(data_path, 'sample_audvis_filt-0-40_raw-eve.fif')
 fname_evoked = op.join(data_path, 'sample_audvis-ave.fif')
@@ -48,7 +48,7 @@ evoked.plot_white(noise_cov)  # Show whitening
 all_ch_names = evoked.ch_names
 
 # Read the forward solution and compute the inverse operator
-info = mne.io.read_info(fname_evoked)
+info = evoked.info
 trans = mne.read_trans(fname_trans)
 src = mne.read_source_spaces(fname_src)
 bem = mne.read_bem_solution(fname_bem)
@@ -60,13 +60,10 @@ fwd = mne.convert_forward_solution(fwd, surf_ori=True)
 
 # Inversion
 inverse = make_inverse_operator(info, fwd, noise_cov, loose=.2)
-stc_ = apply_inverse(EvokedArray(np.eye(len(info['ch_names'])), info),
-                     inverse).data
-stc_.plot(subject='sample', hemi='both', subjects_dir=subjects_dir,
-          initial_time=0.1)
-stc = apply_inverse(evoked, info, inverse)
+stc_ = apply_inverse(EvokedArray(np.eye(len(info['ch_names'])), info,
+                                 nave=evoked.nave), inverse).data
+
+stc = apply_inverse(evoked, inverse_operator=inverse)
 stc.plot(subject='sample', hemi='both', subjects_dir=subjects_dir,
          initial_time=0.1)
 assert np.allclose(stc.data, np.dot(stc_, evoked.data))
-
-
