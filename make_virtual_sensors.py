@@ -168,8 +168,3 @@ stc = apply_solver(solver, evoked, fwd, noise_cov, loose, depth)
 brain = stc.plot(subject='sample', hemi='rh', subjects_dir=subjects_dir,
                  initial_time=0.1, time_unit='s')
 brain.show_view('lateral')
-
-
-
-
-
