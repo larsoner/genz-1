@@ -5,6 +5,7 @@ Store the solution in a nifti file for visualisation, e.g. with Freeview """
 
 # Author(s): Kambiz Tavabi <ktavabi@gmail.com>
 
+import time
 import os.path as op
 import numpy as np
 import matplotlib.pyplot as plt
@@ -81,12 +82,15 @@ fwd = mne.make_forward_solution(raw_sss_pca.info, trans=None, src=src,
 filters = make_lcmv(raw_sss_pca.info, fwd, data_cov, reg=0.05,
                     pick_ori='max-power', weight_norm='nai',
                     reduce_rank=True)
-stc = apply_lcmv_raw(raw_sss_pca.copy().filter(), filters)
+t0 = time.time()
+stc = apply_lcmv_raw(raw_sss_pca.copy().filter(1, 4, fir_design='firwin2',
+                                               n_jobs=n_jobs), filters)
+print(' Time: %s mns' % round((time.time() - t0) / 60, 2))
 stc.data[:, :] = np.abs(stc.data)
 
 # Save result in stc files
-stc.save('lcmv-vol')
-stc.crop(0.0, 2.5)
+# stc.save('lcmv-vol')
+stc.crop(0.0, 1.0)
 
 # Save result in a 4D nifti file
 img = mne.save_stc_as_volume(datapath + 'genz_lily_lcmv_inverse.nii.gz',
