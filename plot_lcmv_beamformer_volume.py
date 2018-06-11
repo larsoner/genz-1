@@ -32,68 +32,76 @@ def process_raw(raw_fname):
     return raw, head_pos
 
 
-def remove_artifacts_pca(raw, proj_nums):
-    ecg_projs, _ = compute_proj_ecg(raw_sss, n_grad=proj_nums[0][0],
-                                    n_mag=proj_nums[0][1],
-                                    average=True)
+def do_pca(raw, proj_nums):
+    ecg_projs, ecg_events = compute_proj_ecg(raw_sss, n_grad=proj_nums[0][0],
+                            n_mag=proj_nums[0][1],
+                            average=True)
 
-    eog_projs, _ = compute_proj_eog(raw_sss, n_grad=proj_nums[1][0],
-                                    n_mag=proj_nums[1][1],
-                                    average=True)
+    eog_projs, eog_events = compute_proj_eog(raw_sss, n_grad=proj_nums[1][0],
+                            n_mag=proj_nums[1][1],
+                            average=True)
     raw_sss.info['projs'] += eog_projs + ecg_projs
-    return raw_sss, ecg_projs, eog_projs
+    return raw_sss, (ecg_projs, eog_projs, ecg_events, eog_events)
 
 
 subjects_dir = '/Users/ktavabi/Data/freesufer'
-datapath = '/Users/ktavabi/Data/genzds/'
-raw_fname = datapath + 'genz_lily_resting_01_raw.fif'
+datapath = '/Users/ktavabi/Data/genz/'
+subject = 'genz501_17a'
+raw_fname = op.join(datapath, subject, 'raw_fif',
+                    '%s_rest_01_raw.fif' % subject)
+sss_fname = op.join(datapath, subject, 'sss_fif',
+                    '%s_rest_01_raw_sss.fif' % subject)
 n_jobs = 2
-proj_nums = [[1, 1, 0],  # ECG
-             [1, 1, 0]]  # EOG
+proj_nums = [[1, 2],  # ECG [grad, mag]
+             [2, 2]]  # EOG
 
 # Denoise & clean
-if not op.isfile(raw_fname[:-4] + '_sss.fif'):
+if not op.isfile(sss_fname):
     raw_sss, head_pos = process_raw(raw_fname)
 else:
-    raw_sss = read_raw_fif(raw_fname[:-4] + '_sss.fif', preload=True)
+    raw_sss = read_raw_fif(sss_fname, preload=True)
 
-raw_sss_pca, ecg_projs, eog_projs = remove_artifacts_pca(raw_sss, proj_nums)
+raw_sss_pca, pca = do_pca(raw_sss, proj_nums)
+ecg_projs, eog_projs, ecg_events, eog_events = pca
 print(ecg_projs[-2:])
-plot_projs_topomap(ecg_projs[-2:])
 print(eog_projs[-2:])
+plot_projs_topomap(ecg_projs[-2:])
 plot_projs_topomap(eog_projs[-2:])
 
+# Filter
+raw_filt = raw_sss_pca.copy().filter(h_freq=4., l_freq=None,
+                                     filter_length='30s', n_jobs=n_jobs,
+                                     fir_design='firwin2', phase='zero-double')
+
 # Pick the channels of interest
-raw_sss_pca.pick_types(meg='grad')
+raw_filt.pick_types(meg='grad')
 
 # Re-normalize projectors after subselection
-raw_sss_pca.info.normalize_proj()
+raw_filt.info.normalize_proj()
 
 # regularized data covariance
-data_cov = mne.compute_raw_covariance(raw_sss_pca, n_jobs=n_jobs)
+data_cov = mne.compute_raw_covariance(raw_filt, n_jobs=n_jobs)
 
 # beamformer requirements
 sphere = mne.make_sphere_model(r0='auto', head_radius='auto',
-                               info=raw_sss_pca.info)
-src = mne.setup_volume_source_space(subject='genz_lily', sphere=sphere,
+                               info=raw_filt.info)
+src = mne.setup_volume_source_space(subject='fsaverage', sphere=sphere,
                                     subjects_dir=subjects_dir)
-fwd = mne.make_forward_solution(raw_sss_pca.info, trans=None, src=src,
+fwd = mne.make_forward_solution(raw_filt.info, trans=None, src=src,
                                 bem=sphere, n_jobs=n_jobs)
-filters = make_lcmv(raw_sss_pca.info, fwd, data_cov, reg=0.05,
+filters = make_lcmv(raw_filt.info, fwd, data_cov, reg=0.05,
                     pick_ori='max-power', weight_norm='nai',
                     reduce_rank=True)
 t0 = time.time()
-stc = apply_lcmv_raw(raw_sss_pca.copy().filter(1, 4, fir_design='firwin2',
-                                               n_jobs=n_jobs), filters)
+stc = apply_lcmv_raw(raw_filt, filters)
 print(' Time: %s mns' % round((time.time() - t0) / 60, 2))
-stc.data[:, :] = np.abs(stc.data)
 
 # Save result in stc files
-# stc.save('lcmv-vol')
+stc.save(op.join(datapath, subject, 'lcmv-vol'))
 stc.crop(0.0, 1.0)
 
 # Save result in a 4D nifti file
-img = mne.save_stc_as_volume(datapath + 'genz_lily_lcmv_inverse.nii.gz',
+img = mne.save_stc_as_volume(op.join(datapath, subject, 'lcmv_inverse.nii.gz',),
                              stc, fwd['src'], mri_resolution=False)
 
 t1_fname = subjects_dir + '/fsaverage/mri/T1.mgz'
