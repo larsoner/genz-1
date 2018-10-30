@@ -12,8 +12,8 @@ import mnefun
 import numpy as np
 from picks import names, bad_channels
 
-params = mnefun.Params(tmin=None, tmax=None, n_jobs=18,
-                       decim=1, proj_sfreq=200,
+params = mnefun.Params(tmin=-1., tmax=1., n_jobs=18,
+                       decim=5, proj_sfreq=200,
                        n_jobs_fir='cuda', n_jobs_resample='cuda',
                        filter_length='auto', lp_cut=80., bmin=None,
                        lp_trans='auto', bem_type='5120')
@@ -38,9 +38,9 @@ for si, subj in enumerate(params.subjects):
                         output.write("%s\n" % ch_name)
 
 params.dates = [None] * len(params.subjects)
-params.structurals = ['sub%s' % ss for ss in params.subjects]
+params.structurals = params.subjects
 params.subject_run_indices = None
-params.subjects_dir = '/brainstudio/data/genz/freesurf_subjs'
+#  params.subjects_dir = '/brainstudio/data/genz/freesurf_subjs'
 params.score = None
 params.run_names = ['%s_rest_01']
 params.acq_ssh = 'kambiz@minea.ilabs.uw.edu'
@@ -68,20 +68,23 @@ params.flat = dict(grad=1e-13, mag=1e-15)
 params.get_projs_from = np.arange(1)
 params.inv_names = ['%s']
 params.inv_runs = [np.arange(1)]
-params.proj_nums = [[3, 3, 0],  # ECG: grad/mag/eeg
-                    [3, 3, 0],  # EOG
+params.proj_nums = [[1, 2, 0],  # ECG: grad/mag/eeg
+                    [2, 2, 0],  # EOG
                     [0, 0, 0]]  # Continuous (from ERM)
 params.on_missing = 'ignore'  # some subjects will not complete the paradigm
 params.report_params.update(
-    bem=True,
+    bem=False,
     psd=True,  # often slow
+    ssp=True,
+    source_alignment=False
+
 )
 mnefun.do_processing(
     params,
     fetch_raw=False,
     do_score=False,
     push_raw=False,
-    do_sss=True,
+    do_sss=False,
     fetch_sss=False,
     do_ch_fix=False,
     gen_ssp=False,
@@ -90,6 +93,6 @@ mnefun.do_processing(
     gen_covs=False,
     gen_fwd=False,
     gen_inv=False,
-    gen_report=False,
+    gen_report=True,
     print_status=True,
 )
