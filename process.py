@@ -12,10 +12,10 @@ import mnefun
 import numpy as np
 from picks import names, bad_channels
 
-params = mnefun.Params(tmin=-1., tmax=1., n_jobs=18,
+params = mnefun.Params(n_jobs=18,
                        decim=5, proj_sfreq=200,
                        n_jobs_fir='cuda', n_jobs_resample='cuda',
-                       filter_length='auto', lp_cut=80., bmin=None,
+                       filter_length='auto', lp_cut=80.,
                        lp_trans='auto', bem_type='5120')
 
 
@@ -68,15 +68,15 @@ params.flat = dict(grad=1e-13, mag=1e-15)
 params.get_projs_from = np.arange(1)
 params.inv_names = ['%s']
 params.inv_runs = [np.arange(1)]
-params.proj_nums = [[1, 2, 0],  # ECG: grad/mag/eeg
+params.proj_nums = [[2, 2, 0],  # ECG: grad/mag/eeg
                     [2, 2, 0],  # EOG
                     [0, 0, 0]]  # Continuous (from ERM)
 params.on_missing = 'ignore'  # some subjects will not complete the paradigm
 params.report_params.update(
-    bem=False,
+    bem=True,
     psd=True,  # often slow
     ssp=True,
-    source_alignment=False
+    source_alignment=True
 
 )
 mnefun.do_processing(
@@ -93,6 +93,6 @@ mnefun.do_processing(
     gen_covs=False,
     gen_fwd=False,
     gen_inv=False,
-    gen_report=True,
+    gen_report=False,
     print_status=True,
 )
