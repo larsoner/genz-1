@@ -38,20 +38,15 @@ from mayavi import mlab
 
 import mne
 
-################
-_USE_DB = False
-################
-
 
 def plot_band(band):
-    title = "%s (%d-%d Hz) - db=%s" % ((band.capitalize(),) + freq_bands[band]+
-                                       (_USE_DB,))
+    title = "%s (%d-%d Hz)" % ((band.capitalize(),) + freq_bands[band])
     topos[band].plot_topomap(
         times=0., scalings=1., cbar_fmt='%0.1f', vmin=0, cmap='inferno',
         time_format=title)
     brain = stcs[band].plot(
         subject=subject, subjects_dir=subjects_dir, views='cau', hemi='both',
-        time_label=title, title=title, colormap='inferno',
+        time_label=title, title=title, colormap='inferno', smoothing_steps=25,
         clim=dict(kind='percent', lims=(70, 85, 99)))
     brain.show_view(dict(azimuth=0, elevation=0), roll=0)
     return fig, brain
@@ -92,11 +87,12 @@ raw_erm.add_proj(raw.info['projs'])
 # raw.add_proj(ssp_ecg_eog, remove_existing=True)
 # raw_erm.add_proj(ssp_ecg_eog)
 # mne.viz.plot_projs_topomap(raw.info['projs'], info=raw.info)
-raw.pick_types(meg='grad')
 
 ##############################################################################
 # Explore data
-
+fig = mne.viz.plot_projs_topomap(raw.info['projs'][:-1],
+                                 info=raw.info)
+fig.subplots_adjust(0.07, 0.07, 0.9, 0.8, 0.2, .2)
 n_fft = next_fast_len(int(round(4 * new_sfreq)))
 print('Using n_fft=%d (%0.1f sec)' % (n_fft, n_fft / raw.info['sfreq']))
 raw.plot_psd(n_fft=n_fft, proj=True, n_jobs=18)
@@ -112,22 +108,21 @@ trans = mne.read_trans(trans_fname)
 fig = mne.viz.plot_alignment(
     raw.info, trans=trans, subject=subject, subjects_dir=subjects_dir,
     dig=True, coord_frame='meg')
-mlab.view(180, 90, figure=fig)
-
+mlab.view(0, 90, focalpoint=(0., 0., 0.), distance=0.6, figure=fig)
 fwd = mne.make_forward_solution(
-    raw.info, trans, src=src, bem=bem, eeg=False, verbose=True, n_jobs=18)
+    raw.info, trans, src=src, bem=bem, eeg=False, verbose=True)
 
 ##############################################################################
 # Compute and apply inverse to PSD estimated using multitaper + Welch
 
-noise_cov = mne.compute_raw_covariance(raw_erm, method='oas', n_jobs=18)
+noise_cov = mne.compute_raw_covariance(raw_erm, n_jobs=18)
 
 inverse_operator = mne.minimum_norm.make_inverse_operator(
     raw.info, forward=fwd, noise_cov=noise_cov, verbose=True)
 
 stc_psd, evoked_psd = mne.minimum_norm.compute_source_psd(
     raw, inverse_operator, lambda2=1. / 9., method='MNE', n_fft=n_fft,
-    dB=_USE_DB, return_sensor=True, verbose=True, n_jobs=18)
+    dB=False, return_sensor=True, n_jobs=18, verbose=True)
 
 ##############################################################################
 # Group into frequency bands, then normalize each source point and sensor
