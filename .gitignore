@@ -63,6 +63,5 @@ target/
 # Atom
 .ropeproject/
 
-# Raw MEG data
-*raw.fif
-*raw_sss.fif
+
+/data/
