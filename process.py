@@ -9,34 +9,42 @@ GenZ pilot analysis script.
 
 import os.path as op
 import mnefun
+import pandas as pd
 import numpy as np
-from picks import names, bad_channels
 
 params = mnefun.Params(n_jobs=18,
                        decim=5, proj_sfreq=200,
                        n_jobs_fir='cuda', n_jobs_resample='cuda',
                        filter_length='auto', lp_cut=80.,
-                       lp_trans='auto', bem_type='5120')
+                       lp_trans='auto', bem_type='5120',
+                       tmin=-.2, tmax=.2)
 
-
-params.subjects = names
-params.subject_indices = np.setdiff1d(np.arange(len(params.subjects)),
-                                      np.array([3]))
 # write prebads
-for si, subj in enumerate(params.subjects):
+picks = pd.read_csv('/home/ktavabi/Github/genz/static/picks.tsv', sep='\t',
+                    usecols=['id', 'badChs'])
+picks.sort_values(by='id', inplace=True)
+for si, subj in enumerate(picks.id.values):
+    subj = 'genz%s' % subj
     if op.exists(op.join(params.work_dir, subj, 'raw_fif')):
         prebad_file = op.join(params.work_dir, subj,
                               'raw_fif', '%s_prebad.txt' % subj)
         if not op.exists(prebad_file):
-            assert len(bad_channels) == len(params.subjects)
-            if bad_channels[si] is None:
-                with open(prebad_file, 'w') as f:
-                    f.write("")
+            print('Writing channles %s to prebad for %s'
+                  % (picks.iloc[si].badChs, subj))
+            if picks.iloc[si].badChs is None:
+                with open(prebad_file, 'w') as output:
+                    output.write("")
+            elif len(picks.iloc[si].badChs.split(sep=',')) == 1:
+                with open(prebad_file, 'w') as output:
+                   output.write("MEG%s\n" % picks.iloc[si].badChs)
             else:
                 with open(prebad_file, 'w') as output:
-                    for ch_name in bad_channels[si]:
-                        output.write("%s\n" % ch_name)
+                    for ch_name in picks.iloc[si].badChs.split(sep=','):
+                        output.write("MEG%s\n" % ''.join(ch_name.split()))
 
+params.subjects = ['genz%s' % cc for cc in picks.id.values]
+params.subject_indices = np.setdiff1d(np.arange(len(params.subjects)),
+                                      np.array([3]))
 params.dates = [None] * len(params.subjects)
 params.structurals = params.subjects
 params.subject_run_indices = None
@@ -68,9 +76,9 @@ params.flat = dict(grad=1e-13, mag=1e-15)
 params.get_projs_from = np.arange(1)
 params.inv_names = ['%s']
 params.inv_runs = [np.arange(1)]
-params.proj_nums = [[2, 2, 0],  # ECG: grad/mag/eeg
-                    [2, 2, 0],  # EOG
-                    [0, 0, 0]]  # Continuous (from ERM)
+params.proj_nums = [[1, 1, 0],  # ECG: grad/mag/eeg
+                    [1, 1, 0],  # EOG
+                    [1, 1, 0]]  # Continuous (from ERM)
 params.on_missing = 'ignore'  # some subjects will not complete the paradigm
 params.report_params.update(
     bem=True,
@@ -93,6 +101,6 @@ mnefun.do_processing(
     gen_covs=False,
     gen_fwd=False,
     gen_inv=False,
-    gen_report=False,
+    gen_report=True,
     print_status=True,
 )
