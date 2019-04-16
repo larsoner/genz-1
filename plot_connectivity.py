@@ -47,7 +47,6 @@ def plot_band(band):
     brain.show_view(dict(azimuth=0, elevation=0), roll=0)
     return fig, brain
 
-
 subject = 'genz530_17a'
 
 
@@ -65,7 +64,7 @@ n_fft = next_fast_len(int(round(4 * new_sfreq)))
 raw = mne.io.read_raw_fif(raw_fname)
 raw.load_data().resample(new_sfreq, n_jobs='cuda')
 raw_erm = mne.io.read_raw_fif(raw_erm_fname)
-raw_erm.load_data().resample(new_sfreq, n_jobs='cuda')
+raw_erm.load_data().resample(new_sfreq, n_jobs='cuda')⁄
 raw_erm.add_proj(raw.info['projs'])
 
 

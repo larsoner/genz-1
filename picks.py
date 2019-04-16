@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
-"""Script generates tsv files with lists of subjects id and
-gender for MR and MEG modalities.
-"""
+"""Write tsv files containing subject id & gender list."""
 
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import pprint
+
+sns.set(style="ticks", color_codes=True)
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 100)
+pd.set_option('display.width', 1000)
+pd.set_option('precision', 2)
 
 # Subjects with MEG data ACQ
 subjects = [
@@ -156,35 +162,55 @@ subjects = [
     '532_17a'
 ]  # List compiled by Erica Peterson
 
-exclude = ['104_9a',  # Too few EOG events
-           '108_9a',  # Fix
-           '113_9a',  # Too few ECG events
-           '115_9a',  # no cHPI
-           '209_11a',  # Too few EOG events
-           '231_11a',  # twa_hp calc fail with assertion error
-           '432_15a',  # Too few ECG events
-           '510_17a', ]  # Too few EOG events
 # picks for MEG datasets
 ssdf = pd.DataFrame({'id': subjects})
 ssdf.sort_values(by='id')
 
+# merge with RA spreadsheets
 dfs = []
 for ag in [9, 11, 13, 15, 17]:
     tsv = '/home/ktavabi/Github/genz/static/' \
           'GenZ_subject_information - %da group.tsv' % ag
-    dfs.append(pd.read_csv(tsv, sep='\t',
-                           usecols=['Subject Number', 'Sex', 'Bad Channels'],
-                           keep_default_na=False))
+    tmp = pd.read_csv(tsv, sep='\t',
+                      usecols=['Subject Number', 'Sex', 'Bad Channels',
+                               'Age (Years) at enrollement', 'LPA', 'RPA'],
+                      keep_default_na=False)
+    tmp.insert(len(tmp.columns), "ag", np.repeat(ag, len(tmp)))
+    dfs.append(tmp)
 
 df = pd.concat(dfs, ignore_index=True)
-df.columns = ['id', 'sex', 'badChs']
+df.columns = ['id', 'sex', 'yrs', 'lpa', 'rpa', 'badChs', 'ag']
 df.id = [ii[5:] for ii in df.id.values]
 df.sort_values(by='id')
 dups = df[df.duplicated('id')].index.values.tolist()
 df.drop(df.index[dups], inplace=True)
-df.drop(df[df.id.isin(exclude)].index, inplace=True)
 ssdf.merge(df, on='id', validate='1:1').to_csv(
     '/home/ktavabi/Github/genz/static/picks.tsv', sep='\t')
+ssdf = ssdf.merge(df, how='outer', on='id', validate='1:1')
+
+# bit of wrangling
+ssdf['id'].replace('', np.nan, inplace=True)
+ssdf.dropna(subset=['id'], inplace=True)
+assert (np.logical_or(ssdf['sex'].values == 'male',
+                      ssdf['sex'].values == 'female')).all()
+ssdf.lpa = pd.to_numeric(ssdf.lpa)
+ssdf.rpa = pd.to_numeric(ssdf.rpa)
+lpas = ssdf[~(ssdf['lpa'].values < 0)].id
+ssdf.loc[ssdf.id.isin(lpas), 'lpa'] = - ssdf.loc[ssdf.id.isin(lpas), 'lpa']
+ssdf['ag'] = ssdf['ag'].astype('category')
+ssdf.yrs = pd.to_numeric(ssdf.yrs)
+
+# spit out descriptives & plot data for subject age & periauricular fids
+desc = ssdf.groupby('ag').describe()
+pprint.pprint(desc)
+g = sns.pairplot(ssdf, vars=['yrs', 'lpa', 'rpa'], hue="sex",
+                 palette="husl", diag_kind="kde", height=2.5)
+
+h = sns.catplot(x="ag", hue="sex", data=ssdf, kind="count",
+                height=4, aspect=1.7)
+(h.set_axis_labels("Age Group", "Count")
+ .set(ylim=(7, 19))
+ .despine(left=True))
 
 # picks for MRI datasets in list compiled by Neva Corrigan
 xls = pd.read_excel('GenzMRISubjectNumbers.xlsx', header=None)
