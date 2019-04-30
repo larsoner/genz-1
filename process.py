@@ -13,9 +13,9 @@ import pandas as pd
 import numpy as np
 
 params = mnefun.Params(n_jobs=18,
-                       decim=5, proj_sfreq=200,
+                       decim=1, proj_sfreq=500,
                        n_jobs_fir='cuda', n_jobs_resample='cuda',
-                       filter_length='auto', lp_cut=80.,
+                       filter_length='auto', lp_cut=100.,
                        lp_trans='auto', bem_type='5120',
                        tmin=-.2, tmax=.2)
 
@@ -29,7 +29,8 @@ exclude = ['104_9a',  # Too few EOG events
            '209_11a',  # Too few EOG events
            '231_11a',  # twa_hp calc fail with assertion error
            '432_15a',  # Too few ECG events
-           '510_17a', ]  # Too few EOG events
+           '510_17a',  # Too few ECG events
+           '527_17a']  # Too few EOG events
 picks.drop(picks[picks.id.isin(exclude)].index, inplace=True)
 picks.sort_values(by='id', inplace=True)
 for si, subj in enumerate(picks.id.values):
@@ -57,7 +58,7 @@ params.subject_indices = np.setdiff1d(np.arange(len(params.subjects)),
 params.dates = [None] * len(params.subjects)
 params.structurals = params.subjects
 params.subject_run_indices = None
-#  params.subjects_dir = '/brainstudio/data/genz/freesurf_subjs'
+params.subjects_dir = '/mnt/jaba/meg/genz/anatomy'
 params.score = None
 params.run_names = ['%s_rest_01']
 params.acq_ssh = 'kambiz@minea.ilabs.uw.edu'
@@ -68,7 +69,7 @@ params.sss_type = 'python'
 params.sss_regularize = 'in'
 params.st_correlation = 0.98
 params.trans_to = 'twa'
-params.tsss_dur = 300.
+params.tsss_dur = 299.
 # Set the parameters for head position estimation:
 params.coil_dist_limit = 0.01
 params.coil_t_window = 'auto'  # use the smallest reasonable window size
@@ -77,39 +78,43 @@ params.coil_bad_count_duration_limit = 1.  # sec
 # Annotation params
 params.rotation_limit = 20.  # deg/s
 params.translation_limit = 0.01  # m/s
-# Trial rejection
+# Cov
+params.runs_empty = ['%s_erm_01']  # Define empty room runs
+params.cov_method = 'shrunk'
+params.compute_rank = True  # compute rank of the noise covariance matrix
+params.force_erm_cov_rank_full = False  # compute and use the empty-room rank
 params.reject = dict()
-params.proj_ave = True
 params.flat = dict(grad=1e-13, mag=1e-15)
-# Which runs and trials to use
+# Proj
 params.get_projs_from = np.arange(1)
+params.proj_ave = True
+params.proj_meg = 'combined'
 params.inv_names = ['%s']
 params.inv_runs = [np.arange(1)]
 params.proj_nums = [[1, 1, 0],  # ECG: grad/mag/eeg
                     [1, 1, 0],  # EOG
                     [1, 1, 0]]  # Continuous (from ERM)
-params.on_missing = 'ignore'  # some subjects will not complete the paradigm
 params.report_params.update(
-    bem=True,
-    psd=True,  # often slow
-    ssp=True,
-    source_alignment=True
-
-)
+        bem=True,
+        psd=True,  # often slow
+        ssp=True,
+        source_alignment=True
+        
+        )
 mnefun.do_processing(
-    params,
-    fetch_raw=False,
-    do_score=False,
-    push_raw=False,
-    do_sss=False,
-    fetch_sss=False,
-    do_ch_fix=False,
-    gen_ssp=False,
-    apply_ssp=False,
-    write_epochs=False,
-    gen_covs=True,
-    gen_fwd=True,
-    gen_inv=False,
-    gen_report=True,
-    print_status=False,
-)
+        params,
+        fetch_raw=False,
+        do_score=False,
+        push_raw=False,
+        do_sss=False,
+        fetch_sss=False,
+        do_ch_fix=False,
+        gen_ssp=False,
+        apply_ssp=False,
+        write_epochs=False,
+        gen_covs=False,
+        gen_fwd=False,
+        gen_inv=False,
+        gen_report=True,
+        print_status=False,
+        )
