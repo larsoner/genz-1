@@ -1,11 +1,15 @@
-# -*- coding: utf-8 -*-
-"""
-GenZ pilot analysis script.
-@author: Kambiz Tavabi
-@contact: ktavabi@gmail.com
-@license: MIT
-@date: 04/21/2018
-"""
+#!/usr/bin/env python
+
+"""Adolescent resting state MEG data MNEFUN processing pipeline."""
+
+__author__ = "Kambiz Tavabi"
+__copyright__ = "Copyright 2018, Seattle, Washington"
+__credits__ = ["Goedel", "Escher", "Bach"]
+__license__ = "MIT"
+__version__ = "1.0.1"
+__maintainer__ = "Kambiz Tavabi"
+__email__ = "ktavabi@uw.edu"
+__status__ = "Development"
 
 import os.path as op
 import mnefun
@@ -33,6 +37,7 @@ exclude = ['104_9a',  # Too few EOG events
            '527_17a']  # Too few EOG events
 picks.drop(picks[picks.id.isin(exclude)].index, inplace=True)
 picks.sort_values(by='id', inplace=True)
+picks = picks[picks.id.isin(['110_9a', '123_9a'])]
 for si, subj in enumerate(picks.id.values):
     subj = 'genz%s' % subj
     if op.exists(op.join(params.work_dir, subj, 'raw_fif')):
@@ -106,14 +111,14 @@ mnefun.do_processing(
         fetch_raw=False,
         do_score=False,
         push_raw=False,
-        do_sss=False,
+        do_sss=True,
         fetch_sss=False,
         do_ch_fix=False,
-        gen_ssp=False,
-        apply_ssp=False,
+        gen_ssp=True,
+        apply_ssp=True,
         write_epochs=False,
         gen_covs=False,
-        gen_fwd=False,
+        gen_fwd=True,
         gen_inv=False,
         gen_report=True,
         print_status=False,
