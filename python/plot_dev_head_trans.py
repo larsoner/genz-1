@@ -14,7 +14,7 @@ import mne
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from statsmodels.robust import mad
-from picks import names
+from python.picks import names
 
 study_dir = '/media/ktavabi/INDAR/data/genz/rsMEG'
 subjects = np.asarray(names)[np.setdiff1d(np.arange(len(names)),
