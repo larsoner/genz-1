@@ -13,26 +13,28 @@ __status__ = 'Development'
 
 import os
 import os.path as op
-import numpy as np
-import xarray as xr
-import seaborn as sns
-import matplotlib.pyplot as plt
-import pandas as pd
 
+import matplotlib.pyplot as plt
 import mne
+import numpy as np
+from scipy import stats
+import pandas as pd
+import seaborn as sns
+import xarray as xr
+from autoreject import AutoReject
+from meeg_preprocessing import utils
 from mne import (
     read_epochs, compute_raw_covariance,
     compute_rank
     )
-from mne.filter import next_fast_len
-from mne.minimum_norm import make_inverse_operator, apply_inverse_epochs
 from mne.connectivity import envelope_correlation
 from mne.cov import regularize
 from mne.externals.h5io import write_hdf5
-
-from autoreject import AutoReject
+from mne.filter import next_fast_len
+from mne.minimum_norm import make_inverse_operator, apply_inverse_epochs, \
+    compute_source_psd_epochs
+from mne.time_frequency import psd_multitaper
 from mnefun import get_fsaverage_medial_vertices
-from meeg_preprocessing import utils
 
 sns.set(style='ticks')
 utils.setup_mpl_rcparams(font_size=10)
@@ -41,9 +43,15 @@ datapath = '/mnt/jaba/meg/genz_resting'
 subjects_dir = '/mnt/jaba/meg/genz/anatomy'
 figs_dir = '/home/ktavabi/Github/genz/figures'
 data_dir = '/home/ktavabi/Github/genz/data'
-bands = {'beta': (14, 30)}  # beta
-ages = np.arange(9, 19, 2)
+# define frequencies of interest
+bandwidth = 'hann'  # bandwidth of the windows in Hz
+bands = {
+        'DC': (0.01, 2), 'delta': (2, 4), 'theta': (5, 7),
+        'alpha': (8, 12), 'beta': (13, 29), 'gamma': (30, 50)
+        }
+ages = np.arange(9, 13, 2)
 new_sfreq = 200.
+n_fft = next_fast_len(int(round(4 * new_sfreq)))
 lims = [75, 85, 95]
 medial_verts = get_fsaverage_medial_vertices()
 # Load and morph labels
@@ -66,11 +74,12 @@ exclude = ['104_9a',  # Too few EOG events
 picks.drop(picks[picks.id.isin(exclude)].index, inplace=True)
 picks.sort_values(by='id', inplace=True)
 for aix, age in enumerate(ages):
-    subjects = ['genz%s' % ss for ss in picks[picks.ag == age].id[:3]]
+    subjects = ['genz%s' % ss for ss in picks[picks.ag == age].id[:2]]
     corr = np.zeros((len(bands), len(subjects), len(fslabels), len(fslabels)))
     degrees = np.zeros((len(bands), len(subjects), len(fslabels)))
     for ix, (kk, vv) in enumerate(bands.items()):
         lf, hf = vv
+        psds = list()
         for si, subject in enumerate(subjects):
             bem_dir = os.path.join(subjects_dir, subject, 'bem')
             bem_fname = os.path.join(bem_dir, '%s-5120-bem-sol.fif' % subject)
@@ -87,16 +96,25 @@ for aix, age in enumerate(ages):
             eps_dir = os.path.join(subj_dir, 'epochs')
             eps_fname = op.join(eps_dir, 'All_%d-%d-sss_%s-epo.fif' % (lf, hf,
                                                                        subject))
-            if not os.path.exists(eps_dir):
-                os.mkdir(eps_dir)
             src_dir = os.path.join(subj_dir, 'source')
-            if not os.path.exists(src_dir):
-                os.mkdir(src_dir)
             # Load and preprocess the data
             print('    Loading data for %s' % subject)
-            n_fft = next_fast_len(int(round(4 * new_sfreq)))
             raw = mne.io.read_raw_fif(raw_fname)
+            if not raw.info['highpass'] == 0:
+                print('%s acquisition HP greater than DC' % subject)
+                continue
+            if not os.path.exists(eps_dir):
+                os.mkdir(eps_dir)
+            if not os.path.exists(src_dir):
+                os.mkdir(src_dir)
             raw.load_data().resample(new_sfreq, n_jobs='cuda')
+            
+            psd_avg_ = 0.
+            for i, stc in enumerate(psd):
+                psd_avg_ += stc.data
+            psd_avg_ /= len(epochs)
+            freqs = stc.times  # the frequencies are stored here
+            psds.append(psd_avg_.mean(axis=0))
             raw_erm = mne.io.read_raw_fif(erm_fname)
             raw_erm.load_data().resample(new_sfreq, n_jobs='cuda')
             raw_erm.add_proj(raw.info['projs'])
@@ -109,10 +127,11 @@ for aix, age in enumerate(ages):
                 # drop bad epochs
                 ar = AutoReject()
                 epochs = ar.fit_transform(epochs)
-                print('      Saving %s-band epochs for %s' % (kk, subject))
+                print('      \nSaving %s-band epochs for %s' % (kk, subject))
                 epochs.save(eps_fname, overwrite=True)
             epochs = read_epochs(eps_fname)
-            print(len(epochs), len(epochs.drop_log) - len(epochs))
+            print('%d, %d (Epochs, drops)' %
+                  (len(epochs), len(epochs.drop_log) - len(epochs)))
             mne.Info.normalize_proj(epochs.info)
             # covariance
             cov = compute_raw_covariance(raw_erm, n_jobs='cuda',
@@ -135,12 +154,11 @@ for aix, age in enumerate(ages):
             label_ts = mne.extract_label_time_course(
                     stcs, labels, fwd['src'], return_generator=True,
                     verbose=True)
-            corr[aix, ix, si] = envelope_correlation(label_ts)
+            corr[ix, si] = envelope_correlation(label_ts)
             # Compute the degree
-            degrees[aix, ix, si] = mne.connectivity.degree(corr[aix, ix, si],
-                                                           0.15)
+            degrees[ix, si] = mne.connectivity.degree(corr[ix, si], 0.15)
         # Plot group averaged corr matrix
-        corr_avg = corr[aix, ix].mean(axis=2).squeeze()
+        corr_avg = corr[ix].mean(axis=0)
         fig, ax = plt.subplots(figsize=(4, 4))
         img = ax.imshow(corr_avg, cmap='viridis',
                         clim=np.percentile(corr, [5, 95]),
@@ -149,6 +167,20 @@ for aix, age in enumerate(ages):
         fig.colorbar(img, ax=ax)
         fig.tight_layout()
         fig.savefig(op.join(figs_dir, 'genz_%s_%s_corrmat.png'
+                            % (age, kk)))
+        # plot group average band-psd
+        psd_avg = np.asarray(psds).mean(0)
+        psd_sem = stats.sem(np.asarray(psds), axis=0)
+        fig, ax = plt.subplots()
+        ax.plot(freqs, psd_avg, label='Mean')
+        ax.fill_between(freqs, psd_avg + psd_sem, psd_avg - psd_sem,
+                        facecolor='cyan', alpha=0.5, label='SEM')
+        ax.set_xlabel('Freq (Hz)')
+        ax.set_xlim(freqs[[0, -1]])
+        ax.set_ylabel('AU')
+        ax.set_title('Grand average %s (%d-%dHz) PSD' % (kk, lf, hf))
+        fig.tight_layout()
+        fig.savefig(op.join(figs_dir, 'genz_%s_%s_psd.png'
                             % (age, kk)))
         # plot group degree on fsaverage
         stc = mne.labels_to_stc(fslabels,
@@ -164,7 +196,9 @@ for aix, age in enumerate(ages):
         brain.save_image(op.join(figs_dir,
                                  'genz_%s_%s_degrees.png' % (age, kk)))
     # container for age x band x subj x roi connectivity data
-    dsx = xr.DataArray(degrees, coords=[subjects, label_nms],
-                       dims=['subject', 'band', 'roi'])
+    dsx = xr.DataArray(degrees, coords=[list(bands.keys()),
+                                        subjects,
+                                        label_nms],
+                       dims=['band', 'subject', 'roi'])
     write_hdf5(op.join(data_dir, 'genz_%s_degree.csv' % age), degrees,
                overwrite=True)

@@ -64,3 +64,6 @@ target/
 .ropeproject/
 
 
+/run_envcor_adapted.py
+data/
+run_envcor_adapted.py
