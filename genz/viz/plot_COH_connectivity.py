@@ -61,10 +61,12 @@ cols = pd.DataFrame(np.array([re.split('_|-|', ll) for ll in Df.roi]),
                     columns=['label', 'label_ix', 'hem'])
 Df = Df.join(cols).reset_index().drop(labels=['index'], axis=1)
 ma_ = ['parsopercularis', 'parsorbitalis']
-g = sns.FacetGrid(Df[Df.label.isin(ma_)],
-                  col='band', row='hem', hue='age', sharey=False,
-                  aspect=1.5)
+g = sns.FacetGrid(Df,
+                  col='band', col_wrap=3, hue='age', sharey=False,
+                  aspect=1.5, palette='colorblind')
 kde = (g.map(sns.distplot, 'degree', rug=True, hist=False).add_legend())
+kde.savefig(op.join(defaults.figs_dir, 'genz_degrees_kde.png'),
+            dpi=140, format='png')
 
 Df_ = Df.set_index(['band', 'roi'], inplace=False).sort_index()
 for ii, (kk, vv) in enumerate(bands.items()):
