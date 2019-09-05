@@ -64,6 +64,6 @@ target/
 .ropeproject/
 
 
-/run_envcor_adapted.py
-data/
-run_envcor_adapted.py
+/genz/processing/run_envcor_adapted.py
+genz/data/
+genz/processing/run_envcor_adapted.py
