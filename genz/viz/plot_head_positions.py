@@ -1,24 +1,38 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
 
-"""Use median absolute deviation to identify outliers in head position obs"""
+"""plot_head_positions: viz distrubtion of individual subject HPs in raw data.
+    Does:
+        1. Get translation vector for SSS target HP for each subject.
+        2. Compute median absolute deviation and define outliers.
+        3. Visualize distribution of HP data.
+"""
 
-# Authors: Kambiz Tavabi <ktavabi@uw.edu>
+__author__ = "Kambiz Tavabi"
+__copyright__ = "Copyright 2018, Seattle, Washington"
+__license__ = "MIT"
+__version__ = "0.1.0"
+__maintainer__ = "Kambiz Tavabi"
+__email__ = "ktavabi@uw.edu"
+__status__ = "Development"
 
-import os.path as op
 import glob
-import numpy as np
-import seaborn as sns
+import os.path as op
+
 import matplotlib.pyplot as plt
-import scipy.linalg as LA
 import mne
+import numpy as np
+import scipy.linalg as LA
+import seaborn as sns
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from statsmodels.robust import mad
+
 from genz.picks import names
 
 study_dir = '/media/ktavabi/INDAR/data/genz/rsMEG'
 subjects = np.asarray(names)[np.setdiff1d(np.arange(len(names)),
                                           np.array([3]))]
+# Read in dev_head_t translation mat from fif nfo
 poss = np.zeros((len(subjects), 3))
 lp_cutoffs = np.zeros((len(subjects)))
 for ii, subj in enumerate(subjects):

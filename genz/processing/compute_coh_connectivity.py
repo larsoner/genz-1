@@ -1,10 +1,15 @@
 #!/usr/bin/env python
 
-"""compute_degree.py: compute functional connectivity (degree) using narrow
-band envolope power.
-    Does per age:
-        1.
-
+"""compute_coh_connectivity.py: compute functional connectivity (degree) using
+narrow band envolope power.
+    Does per age per subject:
+        1. epoch raw into 5 sec trials
+        2. compute erm covariance
+        3. use Autoreject to clean up wide band epoched data
+        per frequency band:
+        4. regularize covariance
+        5. invert and compute pairwise ROI envelope correlations
+        6. compute functional (degree) connectivity
 """
 
 __author__ = 'Kambiz Tavabi'
@@ -14,7 +19,6 @@ __license__ = 'MIT'
 __version__ = '1.0.1'
 __maintainer__ = 'Kambiz Tavabi'
 __email__ = 'ktavabi@uw.edu'
-__status__ = 'Development'
 
 import os
 import os.path as op
@@ -41,12 +45,6 @@ from genz import defaults
 
 utils.setup_mpl_rcparams(font_size=10)
 
-# frequencies of interest
-bands = {
-    'DC': (0.01, 2), 'delta': (2, 4), 'theta': (5, 7),
-    'alpha': (8, 12), 'beta': (13, 29), 'gamma': (30, 50)
-    }
-ages = np.arange(9, 19, 2)
 new_sfreq = 200.
 n_fft = next_fast_len(int(round(4 * new_sfreq)))
 lims = [75, 85, 95]
@@ -61,11 +59,11 @@ label_nms = [rr.name for rr in fslabels]
 picks = pd.read_csv(op.join(defaults.static, 'picks.tsv'), sep='\t')
 picks.drop(picks[picks.id.isin(defaults.exclude)].index, inplace=True)
 picks.sort_values(by='id', inplace=True)
-for aix, age in enumerate(ages):
+for aix, age in enumerate(defaults.ages):
     subjects = ['genz%s' % ss for ss in picks[picks.ag == age].id]
-    degrees = np.zeros((len(subjects), len(bands),
+    degrees = np.zeros((len(subjects), len(defaults.bands),
                         len(fslabels)))
-    corr_mats = np.zeros((len(subjects), len(bands), len(fslabels),
+    corr_mats = np.zeros((len(subjects), len(defaults.bands), len(fslabels),
                           len(fslabels)))
     for si, subject in enumerate(subjects):
         bem_dir = os.path.join(defaults.subjects_dir, subject, 'bem')
@@ -83,7 +81,7 @@ for aix, age in enumerate(ages):
         eps_dir = os.path.join(subj_dir, 'epochs')
         eps_fname = op.join(eps_dir, 'All_sss_%s-epo.fif' % subject)
         src_dir = os.path.join(subj_dir, 'source')
-        # Load raw and epoch
+        # Load raw
         print('    Loading data for %s' % subject)
         raw = mne.io.read_raw_fif(raw_fname)
         if not raw.info['highpass'] == 0:
@@ -107,13 +105,13 @@ for aix, age in enumerate(ages):
         trans = mne.read_trans(trans_fname)
         fwd = mne.make_forward_solution(
             raw.info, trans, src=src, bem=bem, eeg=False, verbose=True)
-        # Epoching
+        # epoch raw into 5 sec trials
         print('      \nLoading ...%s' % op.relpath(eps_fname, defaults.megdata))
         events = mne.make_fixed_length_events(raw, duration=5.)
         epochs = mne.Epochs(raw, events=events, tmin=0, tmax=5.,
                             baseline=None, reject=None, preload=True)
         if not op.isfile(eps_fname):
-            # k-folc CV thresholded artifact rejection
+            # k-fold CV thresholded artifact rejection
             ar = AutoReject()
             epochs = ar.fit_transform(epochs)
             print('      \nSaving ...%s' % op.relpath(eps_fname,
@@ -124,7 +122,7 @@ for aix, age in enumerate(ages):
               (len(events), len(events) - len(epochs.selection)))
         # fw = epochs.plot_psd()
         idx = np.setdiff1d(np.arange(len(events)), epochs.selection)
-        for ix, (kk, vv) in enumerate(bands.items()):
+        for ix, (kk, vv) in enumerate(defaults.bands.items()):
             lf, hf = vv
             # r = raw.copy().filter(lf, hf, fir_window='blackman',
             #                       method='iir', n_jobs=config.N_JOBS)
@@ -133,7 +131,7 @@ for aix, age in enumerate(ages):
                                            pad='constant_values',
                                            n_jobs=config.N_JOBS)
             mne.Info.normalize_proj(epochs_.info)
-            # covariance
+            # regularize covariance
             rank = compute_rank(cov, rank='full', info=epochs_.info)
             cov = regularize(cov, epochs_.info, rank=rank)
             inv = make_inverse_operator(epochs_.info, fwd, cov)
@@ -149,7 +147,7 @@ for aix, age in enumerate(ages):
             corr_mats[si, ix] = envelope_correlation(label_ts)
             # Compute pairwise degree source connectivity amongst labels
             degrees[si, ix] = mne.connectivity.degree(corr_mats[si, ix], 0.15)
-    for ix, (kk, vv) in enumerate(bands.items()):
+    for ix, (kk, vv) in enumerate(defaults.bands.items()):
         corr_ = corr_mats[:, ix].mean(0)
         # Plot group narrow-band corr matrix
         fig, ax = plt.subplots(figsize=(4, 4))
@@ -164,7 +162,7 @@ for aix, age in enumerate(ages):
     # container for age x band x subj x roi connectivity data
     coords = {
         'id': subjects,
-        'band': list(bands.keys()),
+        'band': list(defaults.bands.keys()),
         'roi': label_nms
         }
     dsx = xr.Dataset({'degree': (['id', 'band', 'roi'], degrees)},

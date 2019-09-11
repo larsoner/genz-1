@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Plot functional connectivity computed on envolope power correlation."""
+"""plot_psd_raw.py: plot raw power spectral density."""
 
 __author__ = 'Kambiz Tavabi'
 __copyright__ = 'Copyright 2018, Seattle, Washington'
@@ -20,22 +20,24 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from autoreject import AutoReject
+from meeg_preprocessing import config
 from meeg_preprocessing import utils
 from mne.filter import next_fast_len
 from mne.time_frequency import psd_multitaper
 from scipy import stats
-from meeg_preprocessing import config
+
 from genz import defaults
 
 sns.set(style='ticks')
 utils.setup_mpl_rcparams(font_size=10)
 
-datapath = '/mnt/jaba/meg/genz_resting'
-subjects_dir = '/mnt/jaba/meg/genz/anatomy'
-figs_dir = '/home/ktavabi/Github/genz/figures'
-data_dir = '/home/ktavabi/Github/genz/data'
+datapath = defaults.megdata
+subjects_dir = defaults.subjects_dir
+figs_dir = defaults.figs_dir
+data_dir = defaults.datadir
+static = defaults.static
 
-picks = pd.read_csv('/home/ktavabi/Github/genz/static/picks.tsv', sep='\t')
+picks = pd.read_csv(op.join(static, 'picks.tsv'), sep='\t')
 picks.drop(picks[picks.id.isin(defaults.exclude)].index, inplace=True)
 picks.sort_values(by='id', inplace=True)
 new_sfreq = 200.
@@ -67,7 +69,7 @@ for aix, age in enumerate(ages):
         # k-folc CV thresholded artifact rejection
         ar = AutoReject()
         epochs = ar.fit_transform(epochs)
-        # Compute raw PSD
+        # Compute raw PSD using multitaper windows
         for kk, kind in enumerate(kinds):
             eps = epochs.copy().pick_types(meg=kind)
             psd, fqs = psd_multitaper(eps, fmax=80, adaptive=True,
@@ -79,7 +81,7 @@ for aix, age in enumerate(ages):
             psds_[kk] = psd_eps.mean(0)  # average over channels
         psds.append(psds_)
     # Convert to dB
-    psds_db = np.log10(np.asarray(psds)/32768)  # 32768 for int16
+    psds_db = np.log10(np.asarray(psds) / 32768)  # 32768 for int16
     psds_mean = psds_db.mean(0)  # average over subjects
     psds_sem = stats.sem(psds_db, axis=0)
     # plot group average psd

@@ -8,10 +8,10 @@ __license__ = 'MIT'
 __version__ = '0.1.0'
 __maintainer__ = 'Kambiz Tavabi'
 __email__ = 'ktavabi@uw.edu'
-__status__ = 'Development'
 
 from os import path as op
 from pathlib import Path
+import numpy as np
 
 static = op.join(Path(__file__).parents[0], 'static')
 datadir = op.join(Path(__file__).parents[0], 'data')
@@ -29,3 +29,11 @@ exclude = ['104_9a',  # Too few EOG events
            '510_17a',  # Too few ECG events
            '527_17a']  # Too few EOG events
 
+# frequencies of interest
+bands = {
+    'DC': (0.01, 2), 'delta': (2, 4), 'theta': (5, 7),
+    'alpha': (8, 12), 'beta': (13, 29), 'gamma': (30, 50)
+    }
+
+# ages
+ages = np.arange(9, 19, 2)
