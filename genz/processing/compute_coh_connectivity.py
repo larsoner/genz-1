@@ -1,24 +1,13 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-"""compute_coh_connectivity.py: compute functional connectivity (degree) using
-narrow band envolope power.
-    Does per age per subject:
-        1. epoch raw into 5 sec trials
-        2. compute erm covariance
-        3. use Autoreject to clean up wide band epoched data
-        per frequency band:
-        4. regularize covariance
-        5. invert and compute pairwise ROI envelope correlations
-        6. compute functional (degree) connectivity
+"""Compute functional connectivity (degree) using narrow band envolope power.
+
+For each subject, epoch raw into 5 sec trials, compute erm covariance,
+use Autoreject to clean up wide band epoched data. For each frequency band
+regularize covariance, compute inverse, compute unctional (degree)
+connectivity as correlation between pairwise ROI signal power.
 """
-
-__author__ = 'Kambiz Tavabi'
-__copyright__ = 'Copyright 2018, Seattle, Washington'
-__credits__ = ['Eric Larson']
-__license__ = 'MIT'
-__version__ = '1.0.1'
-__maintainer__ = 'Kambiz Tavabi'
-__email__ = 'ktavabi@uw.edu'
 
 import os
 import os.path as op
@@ -28,24 +17,23 @@ import mne
 import numpy as np
 import pandas as pd
 import xarray as xr
-from autoreject import AutoReject
 from meeg_preprocessing import config
 from meeg_preprocessing import utils
 from mne import (
-    read_epochs, compute_raw_covariance,
-    compute_rank
+    compute_raw_covariance
     )
 from mne.connectivity import envelope_correlation
-from mne.cov import regularize
+from mne.externals.h5io import write_hdf5
 from mne.filter import next_fast_len
-from mne.minimum_norm import make_inverse_operator, apply_inverse_epochs
 from mnefun import get_fsaverage_medial_vertices
 
-from genz import defaults
+from genz import (
+    defaults, funcs
+    )
 
 utils.setup_mpl_rcparams(font_size=10)
 
-new_sfreq = 200.
+new_sfreq = defaults.new_sfreq
 n_fft = next_fast_len(int(round(4 * new_sfreq)))
 lims = [75, 85, 95]
 medial_verts = get_fsaverage_medial_vertices()
@@ -96,9 +84,10 @@ for aix, age in enumerate(defaults.ages):
         raw_erm.load_data().resample(new_sfreq, n_jobs=config.N_JOBS)
         raw_erm.add_proj(raw.info['projs'])
         # ERM covariance
-        cov = compute_raw_covariance(raw_erm, n_jobs=defaults,
-                                     rank='full', method='oas')
-
+        cov = compute_raw_covariance(raw_erm, n_jobs=12,
+                                     reject=dict(grad=4000e-13,
+                                                 mag=4e-12),
+                                     flat=dict(grad=1e-13, mag=1e-15))
         # Make forward stack and get transformation matrix
         src = mne.read_source_spaces(src_fname)
         bem = mne.read_bem_solution(bem_fname)
@@ -107,46 +96,22 @@ for aix, age in enumerate(defaults.ages):
             raw.info, trans, src=src, bem=bem, eeg=False, verbose=True)
         # epoch raw into 5 sec trials
         print('      \nLoading ...%s' % op.relpath(eps_fname, defaults.megdata))
-        events = mne.make_fixed_length_events(raw, duration=5.)
-        epochs = mne.Epochs(raw, events=events, tmin=0, tmax=5.,
-                            baseline=None, reject=None, preload=True)
-        if not op.isfile(eps_fname):
-            # k-fold CV thresholded artifact rejection
-            ar = AutoReject()
-            epochs = ar.fit_transform(epochs)
-            print('      \nSaving ...%s' % op.relpath(eps_fname,
-                                                      defaults.megdata))
-            epochs.save(eps_fname, overwrite=True)
-        epochs = read_epochs(eps_fname)
-        print('%d, %d (Epochs, drops)' %
-              (len(events), len(events) - len(epochs.selection)))
-        # fw = epochs.plot_psd()
-        idx = np.setdiff1d(np.arange(len(events)), epochs.selection)
         for ix, (kk, vv) in enumerate(defaults.bands.items()):
-            lf, hf = vv
-            # r = raw.copy().filter(lf, hf, fir_window='blackman',
-            #                       method='iir', n_jobs=config.N_JOBS)
-            epochs_ = epochs.copy().filter(lf, hf, method='iir',
-                                           fir_window='blackman',
-                                           pad='constant_values',
-                                           n_jobs=config.N_JOBS)
-            mne.Info.normalize_proj(epochs_.info)
-            # regularize covariance
-            rank = compute_rank(cov, rank='full', info=epochs_.info)
-            cov = regularize(cov, epochs_.info, rank=rank)
-            inv = make_inverse_operator(epochs_.info, fwd, cov)
-            # Compute label time series and do envelope correlation
-            stcs = apply_inverse_epochs(epochs_, inv, lambda2=1. / 9.,
-                                        pick_ori='normal',
-                                        return_generator=True)
-            labels = mne.morph_labels(fslabels, subject,
-                                      subjects_dir=defaults.subjects_dir)
-            label_ts = mne.extract_label_time_course(
-                stcs, labels, fwd['src'], return_generator=True,
-                verbose=True)
+            hp, lp = vv
+            label_ts = funcs.extract_labels_timeseries(subject, raw, hp, lp,
+                                                       cov, fwd,
+                                                       defaults.subjects_dir,
+                                                       eps_fname, fslabels,
+                                                       return_generator=True)
             corr_mats[si, ix] = envelope_correlation(label_ts)
             # Compute pairwise degree source connectivity amongst labels
-            degrees[si, ix] = mne.connectivity.degree(corr_mats[si, ix], 0.15)
+            degrees[si, ix] = mne.connectivity.degree(corr_mats[si, ix])
+            fout_ = op.join(eps_dir, '%s_%s_fcDs.h5' % (subject, kk))
+            write_hdf5(fname=fout_, data={
+                'corr': corr_mats[si, ix],
+                'deg': degrees[si, ix]
+                }, overwrite=True)
+            plt.close('all')
     for ix, (kk, vv) in enumerate(defaults.bands.items()):
         corr_ = corr_mats[:, ix].mean(0)
         # Plot group narrow-band corr matrix

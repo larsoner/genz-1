@@ -15,65 +15,23 @@ __email__ = "ktavabi@uw.edu"
 import os
 import os.path as op
 
+import matplotlib.pyplot as plt
 import mne
 import numpy as np
-import scipy.io as sio
 import pandas as pd
-from autoreject import AutoReject
+import scipy.io as sio
 from meeg_preprocessing import config
 from mne import (
-    read_epochs, compute_raw_covariance,
-    compute_rank
+    compute_raw_covariance
     )
-from mne.cov import regularize
 from mne.filter import next_fast_len
-from mne.minimum_norm import make_inverse_operator, apply_inverse_epochs
 from surfer import Brain
-import matplotlib.pyplot as plt
-from genz import defaults
 
+from genz import (
+    defaults, funcs
+    )
 
-def extract_labels_timeseries(subj, r, highpass, lowpass, covar, labels,
-                              subjects_dir,
-                              return_generator=False):
-    # epoch raw into 5 sec trials
-    events = mne.make_fixed_length_events(r, duration=5.)
-    epochs = mne.Epochs(r, events=events, tmin=0, tmax=5.,
-                        baseline=None, reject=None, preload=True)
-    if not op.isfile(eps_fname):
-        # k-fold CV thresholded artifact rejection
-        ar = AutoReject()
-        epochs = ar.fit_transform(epochs)
-        print('      \nSaving ...%s' % op.relpath(eps_fname,
-                                                  defaults.megdata))
-        epochs.save(eps_fname, overwrite=True)
-    epochs = read_epochs(eps_fname)
-    print('%d, %d (Epochs, drops)' %
-          (len(events), len(events) - len(epochs.selection)))
-    # fw = epochs.plot_psd()
-    idx = np.setdiff1d(np.arange(len(events)), epochs.selection)
-    # r = r.copy().filter(lf, hf, fir_window='blackman',
-    #                       method='iir', n_jobs=config.N_JOBS)
-    epochs_ = epochs.copy().filter(highpass, lowpass, method='iir',
-                                   fir_window='blackman',
-                                   pad='constant_values', n_jobs=config.N_JOBS)
-    mne.Info.normalize_proj(epochs_.info)
-    # regularize covariance
-    rank = compute_rank(covar, rank='full', info=epochs_.info)
-    covar = regularize(covar, epochs_.info, rank=rank)
-    inv = make_inverse_operator(epochs_.info, fwd, cov)
-    # Compute label time series and do envelope correlation
-    stcs = apply_inverse_epochs(epochs_, inv, lambda2=1. / 9.,
-                                pick_ori='normal',
-                                return_generator=True)
-    morphed = mne.morph_labels(labels, subj,
-                               subjects_dir=subjects_dir)
-    return mne.extract_label_time_course(stcs, morphed, fwd['src'],
-                                         return_generator=return_generator,
-                                         verbose=True)
-
-
-new_sfreq = 200
+new_sfreq = defaults.new_sfreq
 n_fft = next_fast_len(int(round(4 * new_sfreq)))
 # Load labels
 fslabels = mne.read_labels_from_annot('fsaverage',
@@ -98,7 +56,7 @@ picks.sort_values(by='id', inplace=True)
 for aix, age in enumerate(defaults.ages):
     subjects = ['genz%s' % ss for ss in picks[picks.ag == age].id]
     for ix, (kk, vv) in enumerate(defaults.bands.items()):
-        lp, hp = vv
+        hp, lp = vv
         for si, subject in enumerate(subjects):
             bem_dir = os.path.join(defaults.subjects_dir, subject, 'bem')
             bem_fname = os.path.join(bem_dir, '%s-5120-bem-sol.fif' % subject)
@@ -141,9 +99,11 @@ for aix, age in enumerate(defaults.ages):
                 raw.info, trans, src=src, bem=bem, eeg=False, verbose=True)
             print('      \nLoading ...%s' % op.relpath(eps_fname,
                                                        defaults.megdata))
-            ts_ = extract_labels_timeseries(subject, raw, lp, hp, cov,
-                                            [wernicke_roi, broca_roi],
-                                            defaults.subjects_dir)
+            ts_ = funcs.extract_labels_timeseries(subject, raw, hp, lp, cov,
+                                                  fwd, defaults.subjects_dir,
+                                                  eps_fname,
+                                                  [wernicke_roi, broca_roi],
+                                                  return_generator=False)
             ts_ = np.array(ts_).mean(axis=0)
             mdict_ = {
                 'wernicke': ts_[0],
@@ -169,5 +129,3 @@ for aix, age in enumerate(defaults.ages):
         ax.legend(loc='upper right')
         ax.set(xlabel='Time (sec)', ylabel='Source amplitude',
                title='ROI %s activity' % kk)
-
-

@@ -1,13 +1,7 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """Global study parameters."""
-
-__author__ = 'Kambiz Tavabi'
-__copyright__ = 'Copyright 2018, Seattle, Washington'
-__license__ = 'MIT'
-__version__ = '0.1.0'
-__maintainer__ = 'Kambiz Tavabi'
-__email__ = 'ktavabi@uw.edu'
 
 from os import path as op
 from pathlib import Path
@@ -32,8 +26,12 @@ exclude = ['104_9a',  # Too few EOG events
 # frequencies of interest
 bands = {
     'DC': (0.01, 2), 'delta': (2, 4), 'theta': (5, 7),
-    'alpha': (8, 12), 'beta': (13, 29), 'gamma': (30, 50)
+    'alpha': (8, 12), 'beta': (13, 29), 'gamma': (30, 80)
     }
 
 # ages
 ages = np.arange(9, 19, 2)
+
+# Down sample data to
+new_sfreq = 300.
+

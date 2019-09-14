@@ -1,8 +1,8 @@
-lag_lim = 1;             % lag limit (in seconds)
+lag_lim = .1;                % lag limit (in seconds)
 tr = .005;                  % The sampling rate, here 2.4 seconds between frames of fMRI data
-lags = -10:tr:10;          % UPDATE BASED ON HOW MANY SHIFTS YOU WANT
-nframes = 1001;          % Number of time points in the dataset
-data = [wernicke; broca];
+lags = -10:10;              % UPDATE BASED ON HOW MANY SHIFTS YOU WANT
+nframes = 1001;             % Number of time points in the dataset
+data = [broca; wernicke];
 ds = data.';                % Must be in dimensions time x voxels
 s = 0:1000;
 figure(1);
