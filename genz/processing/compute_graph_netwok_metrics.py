@@ -1,22 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-- Undirected graph no direction in the edges.
-- Edges in an undirected graph are not ordered pairs.
-- Undirected graphs can be used to represent symmetric relationships b/n nodes.
-- In a directed graph an edge is an ordered pair.
-- In- and out-degree of each node in an undirected graph is equal.
-- Matrix rep of undirected graph yields a symmetric graph
-- Undirected can be converted to directed not vise versa.
-- In an adjacency matrix, directed 2->3 means adj[i][j]=true
-but adj[i][j]=false. In undirected it means adj[2][3]=adj[3][2]=true.
-- A bipartite graph (or bigraph) is a graph whose vertices can be divided into
-two disjoint and independent sets U and V such that every edge connects a
-vertex in U to one in V. Vertex sets U and V are usually called the parts of
-the graph. Equivalently, a bipartite graph is a graph that does not contain any
-odd-length cycles.
-"""
+""" """
 
 from mne.externals.h5io import read_hdf5
 
@@ -26,22 +11,59 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+h5 = read_hdf5(
+    '/mnt/jaba/meg/genz_resting/genz105_9a/epochs/genz105_9a_beta_fcDs.h5')
+# Select upper triangle of correlation matrix
+corr = h5['corr']
+# TODO threshold netowrk correlation matrices
+cutoff = np.percentile(corr, 90)
+ut, ui = np.unique(corr[corr > cutoff], return_index=True)
+fig, ax = plt.subplots(figsize=(4, 4))
+n, bins, patches = plt.hist(ut, 10, density=True, facecolor='g', alpha=0.75)
+x1, x2 = np.percentile(ut, [90, 99.9])
+plt.axvspan(x1, x2, facecolor='crimson', alpha=0.3)
+plt.xlabel('pearson r\'s')
+plt.ylabel('Probability')
+plt.title('Histogram of correlations')
+plt.xlim(ut.min(), ut.max())
+plt.grid(True)
+plt.show()
 
-arr = read_hdf5('/mnt/jaba/meg/genz_resting/genz105_9a/epochs'
-                '/genz105_9a_beta_fcDs.h5')['corr']
-dg = nx.from_numpy_array(arr)
-fig, axes = plt.subplots(2, 2)
+fig, ax = plt.subplots(figsize=(4, 4))
+img = ax.imshow(ut, cmap='viridis',
+                clim=np.percentile(ut, [0, 95]),
+                interpolation='nearest', origin='lower')
+fig.colorbar(img, ax=ax)
+fig.tight_layout()
+
+ma_ = h5['corr'] > np.percentile(h5['corr'], 90)
+G = nx.from_numpy_array(h5['corr'][ma_])
+fig, axes = plt.subplots(2, 1)
 fig.subplots_adjust(top=0.92, left=0.07, right=0.97,
                     hspace=0.3, wspace=0.3)
-((ax1, ax2), (ax3, ax4)) = axes  # unpack the axes
+ax1, ax2 = axes  # unpack the axes
 
-nx.draw(nx.subgraph(dg, np.arange(10)), with_labels=True, ax=ax1)
-ug = dg.to_directed()
-nx.draw(nx.subgraph(ug, np.arange(10)), with_labels=True, ax=ax2)
+nx.draw(G, with_labels=True, ax=ax1)
 
 # Shortest path lengths between all nodes
-path = dict(nx.all_pairs_dijkstra_path_length(ug))
-df = pd.DataFrame(path)
-sns.heatmap(df, cmap='terrain', ax=ax4)
+paths = dict(nx.all_pairs_dijkstra_path_length(G))
+sns.heatmap(pd.DataFrame(paths), cmap='terrain', ax=ax2)
 
-tutte = nx.tutte_graph()
+# clustering
+cluster = pd.DataFrame(dict(nx.algorithms.cluster.clustering(G)),
+                       index=np.arange(len(G)))  # local
+# nx.algorithms.cluster.triangles() for global
+
+# efficiency
+eff_l = nx.algorithms.local_efficiency(G)
+eff_g = nx.algorithms.global_efficiency(G)
+
+# small world
+sigma = nx.algorithms.sigma(G)
+omega = nx.algorithms.omega(G)
+
+# betweenness centrality
+bc = nx.algorithms.betweenness_centrality(G)
+
+# resilience
+re = nx.density(G)
