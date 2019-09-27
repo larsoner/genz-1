@@ -95,3 +95,41 @@ nx.draw_networkx_edges(
 nx.draw_networkx_edges(
     G, weighted_pos, edgelist=external, edge_color="gray", style="dashed")
 
+# Create empty affiliation network and list of people
+B = nx.Graph()
+people = set()
+# Load data file into network
+from pathlib import Path
+
+data_dir = Path(
+    '/home/ktavabi/Dropbox/work/Network_Sci_Networkx_quick') / 'data'
+with open(data_dir / 'crossley2012' / '50_ALL_2M.csv') as f:
+    # Parse header
+    events = next(f).strip().split(",")[1:]
+    # Parse rows
+    for row in f:
+        parts = row.strip().split(",")
+        person = parts[0]
+        people.add(person)
+        for j, value in enumerate(parts[1:]):
+            if value != "0":
+                B.add_edge(person, events[j], weight=int(value))
+# Project into person-person co-affiliation network
+from networkx import bipartite
+
+Gs = bipartite.projected_graph(B, people)
+
+betweenness = nx.betweenness_centrality(Gs, normalized=False)
+sorted(betweenness.items(), key=lambda x: x[1], reverse=True)[0:10]
+
+eigenvector = nx.eigenvector_centrality(Gs)
+sorted(eigenvector.items(), key=lambda x: x[1], reverse=True)[0:10]
+
+closeness = nx.closeness_centrality(Gs)
+sorted(closeness.items(), key=lambda x: x[1], reverse=True)[0:10]
+
+triangles = nx.triangles(Gs)
+sorted(triangles.items(), key=lambda x: x[1], reverse=True)[0:10]
+clustering = nx.clustering(Gs)
+[(x, clustering[x]) for x in
+ sorted(people, key=lambda x: eigenvector[x], reverse=True)[0:10]]
