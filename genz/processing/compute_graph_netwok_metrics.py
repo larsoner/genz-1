@@ -12,54 +12,58 @@ import pandas as pd
 import seaborn as sns
 
 h5 = read_hdf5(
-    '/mnt/jaba/meg/genz_resting/genz105_9a/epochs/genz105_9a_beta_fcDs.h5')
-# Select upper triangle of correlation matrix
+    '/users/ktavabi/Data/genz105_9a_beta_fcDs.h5')
+# adjacency matrix
 corr = h5['corr']
-# TODO threshold netowrk correlation matrices
-cutoff = np.percentile(corr, 90)
-ut, ui = np.unique(corr[corr > cutoff], return_index=True)
-fig, ax = plt.subplots(figsize=(4, 4))
-n, bins, patches = plt.hist(ut, 10, density=True, facecolor='g', alpha=0.75)
-x1, x2 = np.percentile(ut, [90, 99.9])
-plt.axvspan(x1, x2, facecolor='crimson', alpha=0.3)
-plt.xlabel('pearson r\'s')
-plt.ylabel('Probability')
-plt.title('Histogram of correlations')
-plt.xlim(ut.min(), ut.max())
-plt.grid(True)
-plt.show()
+mask = np.where(corr >= np.percentile(corr, 20), 1, 0)  # 20 percentile corr
+adj = np.ma.masked_array(corr, mask).mask
 
-fig, ax = plt.subplots(figsize=(4, 4))
-img = ax.imshow(ut, cmap='viridis',
-                clim=np.percentile(ut, [0, 95]),
-                interpolation='nearest', origin='lower')
-fig.colorbar(img, ax=ax)
-fig.tight_layout()
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+n, bins, patches = ax1.hist(corr, 10, density=True, facecolor='c',
+                            alpha=0.85)
+ax1.set_xlabel('pearson r\'s')
+ax1.set_ylabel('Probability')
+ax1.grid(True)
+ax2.set_title('correlation matrix')
+img = ax2.imshow(corr, cmap='viridis',
+                 clim=np.percentile(corr, [0, 95]),
+                 interpolation='nearest', origin='lower')
+fig.colorbar(img, ax=ax2)
 
-ma_ = h5['corr'] > np.percentile(h5['corr'], 90)
-G = nx.from_numpy_array(h5['corr'][ma_])
-fig, axes = plt.subplots(2, 1)
+G = nx.from_numpy_matrix(adj, parallel_edges=False)
+pos = nx.spring_layout(G)
+
+fig, (ax1, ax2) = plt.subplots(1, 2)
 fig.subplots_adjust(top=0.92, left=0.07, right=0.97,
                     hspace=0.3, wspace=0.3)
-ax1, ax2 = axes  # unpack the axes
-
-nx.draw(G, with_labels=True, ax=ax1)
+nx.draw(G, with_labels=True, pos=pos, ax=ax1)
 
 # Shortest path lengths between all nodes
 paths = dict(nx.all_pairs_dijkstra_path_length(G))
-sns.heatmap(pd.DataFrame(paths), cmap='terrain', ax=ax2)
+sns.heatmap(pd.DataFrame(paths), cmap='viridis', ax=ax2)
 
 # clustering
-cluster = pd.DataFrame(dict(nx.algorithms.cluster.clustering(G)),
-                       index=np.arange(len(G)))  # local
-# nx.algorithms.cluster.triangles() for global
+# relationships between a node's neighbors, rather than those of the node
+# itself, i.e., whether a node's neighbors are connected to each other (
+# transitivity). The result of such relationships are triangles: three nodes,
+# all mutually connected. The tendency for such triangles to arise is called
+# clustering. When strong clustering is present, it often suggests robustness,
+# and redundancy in a network.
+clustering = nx.clustering(G)
+fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+n, bins, patches = ax.hist(clustering.values(), 10, density=True,
+                           facecolor='c',
+                           alpha=0.85)
+ax.set_xlabel('cluster size')
+ax.set_ylabel('Probability')
+ax.grid(True)
+ax.set_title('clustering')
 
 # efficiency
-eff_l = nx.algorithms.local_efficiency(G)
-eff_g = nx.algorithms.global_efficiency(G)
+eff_l = [nx.efficiency(G, u, v) for u, v in G.edges]
 
 # small world
-sigma = nx.algorithms.sigma(G)
+sigma = nx.sigma(G)
 omega = nx.algorithms.omega(G)
 
 # betweenness centrality
