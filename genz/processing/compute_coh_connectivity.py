@@ -37,7 +37,7 @@ new_sfreq = defaults.new_sfreq
 n_fft = next_fast_len(int(round(4 * new_sfreq)))
 lims = [75, 85, 95]
 medial_verts = get_fsaverage_medial_vertices()
-# Load and morph labels
+# Load labels
 fslabels = mne.read_labels_from_annot('fsaverage',
                                       'aparc_sub', 'both',
                                       subjects_dir=defaults.subjects_dir)
