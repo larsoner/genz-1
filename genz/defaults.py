@@ -19,6 +19,7 @@ exclude = ['104_9a',  # Too few EOG events
            '121_9a',  # Source space missing points
            '209_11a',  # Too few EOG events
            '231_11a',  # twa_hp calc fail with assertion error
+           '427_15a',  # no epochs
            '432_15a',  # Too few ECG events
            '510_17a',  # Too few ECG events
            '527_17a']  # Too few EOG events
