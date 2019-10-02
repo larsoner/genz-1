@@ -37,16 +37,18 @@ for aix, age in enumerate(defaults.ages):
     subjects = ['genz%s' % ss for ss in picks[picks.ag == age].id]
     coords = [['beta'], [subjects], np.arange(len(label_nms))]
     for ix, band in enumerate(defaults.bands.keys()):
-        for iix, subj in enumerate(subjects):
+        for iix, subject in enumerate(subjects):
+            subj_dir = op.join(defaults.megdata, subject)
+            eps_dir = op.join(subj_dir, 'epochs')
             h5 = read_hdf5(
-                op.join(defaults.datadir, '%s_%s_fcDs.h5' % (subj, band)))
+                op.join(eps_dir, '%s_%s_fcDs.h5' % (subject, band)))
             # adjacency matrix
             corr = h5['corr']
             mask = np.where(corr >= np.percentile(corr, 20), 1, 0)
             adj = np.ma.masked_array(corr, mask).mask
             G = nx.from_numpy_matrix(adj.astype(int), parallel_edges=False)
             if ix & iix == 0:
-                betweeness = np.zeros((1, 1,
+                betweeness = np.zeros((len(defaults.bands), len(subjects),
                                        len(label_nms)),
                                       dtype=dt)
                 betweeness.dtype.names = ['label', 'value']
@@ -71,6 +73,8 @@ for aix, age in enumerate(defaults.ages):
                                                    key=lambda x: eigenvector[x],
                                                    reverse=True)], dtype=dt)
     # bands x subjects x labels, x valaue nd-array
-    betweeness_ = xr.DataArray(betweeness, coords=coords, dims=dims)
-    write_hdf5(op.join(defaults.datadir, 'genz_%s_betweeness.h5' % age),
-               betweeness_.to_dict())
+    for ds, nm in zip([betweeness, hubness, closeness, triangles, clustering],
+                      ['betweeness', 'hubness', 'closeness', 'triangles',
+                       'clustering']):
+        foo = xr.DataArray(ds, coords=coords, dims=dims)
+        foo.to_netcdf(op.join(defaults.datadir, 'genz_%s_%s.h5' % (age, nm)))
