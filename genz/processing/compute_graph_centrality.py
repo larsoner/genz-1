@@ -10,8 +10,10 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import xarray as xr
-from mne.externals.h5io import read_hdf5, write_hdf5
+import time
 
+from mne.externals.h5io import read_hdf5, write_hdf5
+from mnefun._mnefun import timestring
 from genz import defaults
 
 
@@ -32,12 +34,17 @@ picks.drop(picks[picks.id.isin(defaults.exclude)].index, inplace=True)
 picks.sort_values(by='id', inplace=True)
 dt = np.dtype('int, float')
 dims = ['band', 'subject', 'roi']
+bands = list(defaults.bands.keys())
 
 for aix, age in enumerate(defaults.ages):
     subjects = ['genz%s' % ss for ss in picks[picks.ag == age].id]
-    coords = [['beta'], [subjects], np.arange(len(label_nms))]
-    for ix, band in enumerate(defaults.bands.keys()):
+    print('  Loading %s years-old data.' % age)
+    coords = [bands, subjects, np.arange(len(label_nms))]
+    t0 = time.time()
+    for ix, band in enumerate(bands):
+        print('     Computing %s band centrality measures...' % band)
         for iix, subject in enumerate(subjects):
+            print('     %s' % subject)
             subj_dir = op.join(defaults.megdata, subject)
             eps_dir = op.join(subj_dir, 'epochs')
             h5 = read_hdf5(
@@ -47,8 +54,8 @@ for aix, age in enumerate(defaults.ages):
             mask = np.where(corr >= np.percentile(corr, 20), 1, 0)
             adj = np.ma.masked_array(corr, mask).mask
             G = nx.from_numpy_matrix(adj.astype(int), parallel_edges=False)
-            if ix & iix == 0:
-                betweeness = np.zeros((len(defaults.bands), len(subjects),
+            if ix == 0 and iix == 0:
+                betweeness = np.zeros((len(bands), len(subjects),
                                        len(label_nms)),
                                       dtype=dt)
                 betweeness.dtype.names = ['label', 'value']
@@ -76,5 +83,11 @@ for aix, age in enumerate(defaults.ages):
     for ds, nm in zip([betweeness, hubness, closeness, triangles, clustering],
                       ['betweeness', 'hubness', 'closeness', 'triangles',
                        'clustering']):
-        foo = xr.DataArray(ds, coords=coords, dims=dims)
-        foo.to_netcdf(op.join(defaults.datadir, 'genz_%s_%s.h5' % (age, nm)))
+        foo = xr.Dataset({nm: (dims, ds)}).to_dict()
+        for kk in ['coords', 'dims', 'attrs']:
+            foo.pop(kk)
+            if kk == 'attrs':
+                foo['data_vars'][nm].pop('attrs')
+        write_hdf5(op.join(defaults.datadir, 'genz_%s_%s.h5' % (age, nm)),
+                   foo, overwrite=True)
+    print('Run time %s ' % timestring(time.time() - t0))
