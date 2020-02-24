@@ -1,23 +1,16 @@
-lag_lim = .1;                % lag limit (in seconds)
-tr = .005;                  % The sampling rate, here 2.4 seconds between frames of fMRI data
-lags = -10:10;              % UPDATE BASED ON HOW MANY SHIFTS YOU WANT
-nframes = 1001;             % Number of time points in the dataset
+lag_lim = .3;               % lag limit (in seconds)
+tr = .3;                    % The sampling rate, here 2.4 seconds between frames of fMRI data
+lags = -1000:1000;              % UPDATE BASED ON HOW MANY SHIFTS YOU WANT
+nframes = 1000;             % Number of time points in the dataset
 data = [broca; wernicke];
 ds = data.';                % Must be in dimensions time x voxels
-s = 0:1000;
-figure(1);
-plot(s, wernicke, 'b', s, broca, 'r', 'LineWidth',2);
 Cov = lagged_cov(ds(:,1), ds(:,2), max(lags));
-figure(2);
-plot(Cov, ':*g', 'LineWidth', 2);
 
 
 % normalize based on entire run
 for k = 1:numel(lags)
 Cov(:,k) = Cov(:,k)/(nframes - abs(lags(k)));
 end
-figure(3);
-plot(Cov, '--oc', 'LineWidth', 2);
 
 % Parabolic interpolation to get peak lag/correlation
 [pl,pc] = parabolic_interp(Cov,tr);
