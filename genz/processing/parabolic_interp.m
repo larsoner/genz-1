@@ -30,11 +30,13 @@
 %sign of the cross correlation at zero to decide whether to find a maximum
 %or minmum. Next, we look for the global max/min.
 
-%lcc is the empirical lagged covariance curve, lags is a vector with the timepoints in each temporal direction (e.g. -8:2:8 for +/- 8 seconds with a 2 second TR). 
-%I have set a boundary condition such that any lag greater than 5 seconds is recorded as a NaN-- this is based on our experience that giant lags tend to be noise. You can relax or abolish this 
+%lcc is the empirical lagged covariance curve, lags is a vector with the 
+%timepoints in each temporal direction (e.g. -8:2:8 for +/- 8 seconds with a 2 second TR). 
+%I have set a boundary condition such that any lag greater than 5 seconds is recorded as 
+%a NaN-- this is based on our experience that giant lags tend to be noise. You can relax or abolish this 
 %boundary condition if you like.
 
-function [peak_lag,peak_cov] = parabolic_interp_lite(lcc,tr)
+function [peak_lag,peak_cov] = parabolic_interp(lcc,tr)
 	s = size(lcc);
 	peak_lag = single(nan(1,s(1)));
 	peak_cov = peak_lag;
