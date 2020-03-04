@@ -3,4 +3,4 @@ title:  "Survey scales descriptives"
 date:   2020-03-04 01:29:46 -0800
 layout: post
 ---
-Check out the [descriptives]({% post_url /analysis/test.html %})
+Check out the [descriptives]({{ site.baseurl }}{% link /analysis/test.html %})
