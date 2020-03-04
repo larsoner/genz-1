@@ -23,8 +23,8 @@ email: ktavabi@uw.edu
 description: >- # this means to ignore newlines until "baseurl:"
   Landing page for analysis of ILABS adolescent multimodal neuroimaging 
   and developmental study.
-baseurl: "" # the subpath of your site, e.g. /blog
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
+baseurl: "/blob" # the subpath of your site, e.g. /blog
+url: "https://github.com/ktavabi/genz" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: kambiztavabi
 github_username:  ktavabi
 
