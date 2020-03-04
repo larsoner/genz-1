@@ -1,25 +1,20 @@
 """Process GenZ measures using sklearn."""
 
 import os.path as op
-import numpy as np
-from scipy.stats import spearmanr
 import time
-from h5io import read_hdf5, write_hdf5
-import mne
+
 import matplotlib.pyplot as plt
-
-from sklearn.decomposition import PCA, FastICA  # noqa
-from sklearn.preprocessing import PolynomialFeatures  # noqa
-from sklearn.preprocessing import StandardScaler  # noqa
-
-from sklearn.svm import SVR, SVC, LinearSVC  # noqa
+import mne
+import numpy as np
+from h5io import read_hdf5, write_hdf5
+from scipy.stats import spearmanr
 from sklearn.linear_model import LogisticRegression  # noqa
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingClassifier  # noqa
-from sklearn.model_selection import StratifiedKFold, cross_val_score, permutation_test_score  # noqa
+from sklearn.model_selection import (StratifiedKFold,
+                                     permutation_test_score  # noqa
+                                     )
 from sklearn.pipeline import make_pipeline
 
 from genz.defaults import datadir
-
 
 ages = (9, 11, 13, 15, 17)
 freq_idx = [4, 5]  # np.arange(6)  # use all freq ranges

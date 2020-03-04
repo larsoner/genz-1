@@ -1,11 +1,14 @@
 import warnings
+
 import numpy as np
 from nose.tools import assert_equal, assert_in, assert_raises, assert_true
 
 from genz.static.expyfun import ExperimentController, __version__
-from genz.static.expyfun import read_tab, reconstruct_tracker, reconstruct_dealer
-from genz.static.expyfun import _TempDir, _hide_window
 from genz.static.expyfun import TrackerUD, TrackerBinom, TrackerDealer
+from genz.static.expyfun import _TempDir, _hide_window
+from genz.static.expyfun import (read_tab, reconstruct_tracker,
+                                 reconstruct_dealer
+                                 )
 
 warnings.simplefilter('always')
 

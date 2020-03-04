@@ -3,13 +3,10 @@
 
 """ """
 
-from mne.externals.h5io import read_hdf5
-
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import pandas as pd
-import seaborn as sns
+from mne.externals.h5io import read_hdf5
 
 
 def highest_centrality(cent_dict):

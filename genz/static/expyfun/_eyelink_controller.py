@@ -5,17 +5,18 @@
 #
 # License: BSD (3-clause)
 
-import numpy as np
 import datetime
-from distutils.version import LooseVersion
 import os
-from os import path as op
-import sys
 import subprocess
+import sys
 import time
+from distutils.version import LooseVersion
+from os import path as op
 
-from .visual import FixationDot, Circle, RawImage, Line, Text
+import numpy as np
+
 from ._utils import get_config, verbose_dec, logger, string_types
+from .visual import FixationDot, Circle, RawImage, Line, Text
 
 # Constants
 TRIAL_OK = 0

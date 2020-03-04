@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+import warnings
+from os import path as op
+
 import numpy as np
 from nose.tools import assert_equal, assert_raises
 from numpy.testing import assert_array_almost_equal, assert_array_equal
-from os import path as op
-import warnings
 
 from genz.static.expyfun import _TempDir, _has_scipy_version
 from genz.static.expyfun import read_wav, write_wav

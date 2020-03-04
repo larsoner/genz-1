@@ -1,5 +1,6 @@
-from nose.tools import assert_raises, assert_true
 import warnings
+
+from nose.tools import assert_raises, assert_true
 
 from genz.static.expyfun import EyelinkController, ExperimentController
 from genz.static.expyfun import _TempDir, _hide_window, requires_opengl21

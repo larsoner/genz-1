@@ -1,4 +1,5 @@
 import warnings
+
 import numpy as np
 from nose.tools import assert_raises, assert_equal
 

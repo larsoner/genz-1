@@ -1,5 +1,5 @@
-from numpy.testing import assert_array_equal
 from nose.tools import assert_raises
+from numpy.testing import assert_array_equal
 
 from genz.static.expyfun import decimals_to_binary, binary_to_decimals
 

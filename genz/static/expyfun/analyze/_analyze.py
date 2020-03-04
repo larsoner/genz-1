@@ -2,8 +2,8 @@
 """Analysis functions (mostly for psychophysics data).
 """
 
-from collections import namedtuple
 import warnings
+from collections import namedtuple
 
 import numpy as np
 import scipy.stats as ss

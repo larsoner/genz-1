@@ -5,10 +5,11 @@
 
 import sys
 import tempfile
-from shutil import rmtree
 from os import path as op
+from shutil import rmtree
 
 import numpy as np
+
 try:
     from scipy import sparse
 except ImportError:

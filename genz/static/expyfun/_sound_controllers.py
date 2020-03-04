@@ -5,12 +5,11 @@
 #
 # License: BSD (3-clause)
 
-import sys
 import os
+import sys
 import warnings
 
 import numpy as np
-
 import pyglet
 
 _use_silent = (os.getenv('_EXPYFUN_SILENT', '') == 'true')

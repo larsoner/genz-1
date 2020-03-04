@@ -2,9 +2,10 @@
 """Vocoder functions
 """
 
+import warnings
+
 import numpy as np
 from scipy.signal import butter, lfilter, filtfilt
-import warnings
 
 from .._utils import verbose_dec
 

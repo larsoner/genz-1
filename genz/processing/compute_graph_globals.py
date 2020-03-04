@@ -8,9 +8,9 @@ import os.path as op
 import time
 
 import networkx as nx
-import xarray as xr
 import numpy as np
 import pandas as pd
+import xarray as xr
 from mne.externals.h5io import read_hdf5
 from mnefun._mnefun import timestring
 

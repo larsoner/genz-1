@@ -5,18 +5,18 @@
 #
 # License: BSD (3-clause)
 
-from multiprocessing import cpu_count
 import os
+from multiprocessing import cpu_count
 from os.path import join
 from zipfile import ZipFile
 
 import numpy as np
 
-from ..io import read_wav, write_wav
-from .._parallel import parallel_func
 from ._stimuli import window_edges
 from .. import visual as vis
+from .._parallel import parallel_func
 from .._utils import fetch_data_file, _get_user_home_path
+from ..io import read_wav, write_wav
 
 _fs_binary = 40e3  # the sampling rate of the original corpus binaries
 _rms_binary = 0.099977227591239365  # the RMS of the original corpus binaries

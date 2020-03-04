@@ -2,13 +2,14 @@
 """Generic stimulus generation functions."""
 
 import warnings
-import numpy as np
-from scipy import signal
 from threading import Timer
 
-from ..io import read_wav
+import numpy as np
+from scipy import signal
+
 from .._sound_controllers import SoundPlayer
 from .._utils import wait_secs, string_types
+from ..io import read_wav
 
 
 def window_edges(sig, fs, dur=0.01, axis=-1, window='hann', edges='both'):

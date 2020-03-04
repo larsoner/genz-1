@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import warnings
+
+import numpy as np
 from nose.tools import assert_raises, assert_equal, assert_true
 from numpy.testing import (assert_array_equal, assert_array_almost_equal,
-                           assert_allclose)
+                           assert_allclose
+                           )
 from scipy.signal import butter, lfilter
 
-from genz.static.expyfun import (_TempDir, requires_lib, _hide_window,
-                                 requires_opengl21)
-from genz.static.expyfun import (rms, play_sound, convolve_hrtf, window_edges,
-                                 vocode, texture_ERB, crm_info, crm_prepare_corpus,
-                                 crm_sentence, crm_response_menu, CRMPreload,
-                                 add_pad)
 from genz.static.expyfun import ExperimentController
-
+from genz.static.expyfun import (_TempDir, requires_lib, _hide_window,
+                                 requires_opengl21
+                                 )
+from genz.static.expyfun import (rms, play_sound, convolve_hrtf, window_edges,
+                                 vocode, texture_ERB, crm_info,
+                                 crm_prepare_corpus,
+                                 crm_sentence, crm_response_menu, CRMPreload,
+                                 add_pad
+                                 )
 
 warnings.simplefilter('always')
 

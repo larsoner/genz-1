@@ -1,15 +1,16 @@
+import warnings
 from copy import deepcopy
 from functools import partial
-import warnings
 
 import numpy as np
-from nose.tools import assert_raises, assert_true, assert_equal
 from nose.plugins.skip import SkipTest
+from nose.tools import assert_raises, assert_true, assert_equal
 from numpy.testing import assert_allclose
 
 from genz.static.expyfun import ExperimentController, wait_secs, visual
 from genz.static.expyfun import (_TempDir, _hide_window, fake_button_press,
-                                 fake_mouse_click, requires_opengl21)
+                                 fake_mouse_click, requires_opengl21
+                                 )
 from genz.static.expyfun import get_tdt_rates
 
 warnings.simplefilter('always')

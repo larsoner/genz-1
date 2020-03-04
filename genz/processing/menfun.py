@@ -12,9 +12,10 @@ __email__ = "ktavabi@uw.edu"
 __status__ = "Development"
 
 import os.path as op
+
 import mnefun
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 params = mnefun.Params(n_jobs=18,
                        decim=1, proj_sfreq=500,

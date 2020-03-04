@@ -1,8 +1,9 @@
 """Analysis visualization functions
 """
 
-import numpy as np
 from itertools import chain
+
+import numpy as np
 
 from .._utils import string_types
 

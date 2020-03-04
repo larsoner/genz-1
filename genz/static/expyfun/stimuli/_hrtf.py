@@ -3,8 +3,9 @@
 
 import numpy as np
 
-from ..io import read_hdf5
 from .._utils import fetch_data_file, _fix_audio_dims
+from ..io import read_hdf5
+
 
 # This was used to generate "barb_anech.gz":
 #

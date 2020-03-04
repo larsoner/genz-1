@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
-from os import path as op
 import sys
 import warnings
+from os import path as op
 
 from ._utils import _TempDir, string_types, run_subprocess, StringIO, reload
 from ._version import __version__

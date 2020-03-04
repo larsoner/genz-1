@@ -9,6 +9,7 @@ Present white fixation cross on black background for 5 minutes"""
 
 
 import numpy as np
+
 from genz.static.expyfun import ExperimentController
 from genz.static.expyfun import Line
 

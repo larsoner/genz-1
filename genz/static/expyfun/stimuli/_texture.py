@@ -4,8 +4,9 @@
 
 # adapted (with permission) from code by Hari Bharadwaj
 
-import numpy as np
 import warnings
+
+import numpy as np
 
 from ._stimuli import rms, window_edges
 

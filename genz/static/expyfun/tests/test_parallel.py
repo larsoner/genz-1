@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import warnings
+
+import numpy as np
 from nose.tools import assert_raises
 from numpy.testing import assert_array_equal
 

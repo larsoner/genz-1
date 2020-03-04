@@ -4,35 +4,36 @@
 #
 # License: BSD (3-clause)
 
-import warnings
-import subprocess
+import atexit
+import datetime
 import importlib
+import inspect
+import json
+import logging
 import os
 import os.path as op
-import inspect
+import ssl
+import subprocess
 import sys
 import tempfile
-import ssl
-from shutil import rmtree
-import atexit
-import json
-from functools import partial
+import warnings
 from distutils.version import LooseVersion
-from numpy import sqrt, convolve, ones
-from numpy.testing.decorators import skipif
-import logging
-import datetime
-from timeit import default_timer as clock
+from functools import partial
+from shutil import rmtree
 from threading import Timer
+from timeit import default_timer as clock
 
 import numpy as np
 import scipy as sp
+from numpy import sqrt, convolve, ones
+from numpy.testing.decorators import skipif
 
 from ._externals import decorator
 
 # set this first thing to make sure it "takes"
 try:
     import pyglet
+    
     pyglet.options['debug_gl'] = False
     del pyglet
 except Exception:
@@ -44,16 +45,13 @@ if sys.version.startswith('2'):
     string_types = basestring  # noqa
     input = raw_input  # noqa, input is raw_input in py3k
     text_type = unicode  # noqa
-    from __builtin__ import reload
     from urllib2 import urlopen  # noqa
-    from cStringIO import StringIO  # noqa
+
 else:
     string_types = str
     text_type = str
     from urllib.request import urlopen
     input = input
-    from io import StringIO  # noqa, analysis:ignore
-    from importlib import reload  # noqa, analysis:ignore
 
 ###############################################################################
 # LOGGING

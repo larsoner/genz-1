@@ -19,7 +19,6 @@ from mne.preprocessing import (maxwell_filter, compute_proj_ecg,
                                compute_proj_eog)
 from mne.viz import plot_projs_topomap
 from mne.beamformer import make_lcmv, apply_lcmv_raw
-from mne.utils import get_subjects_dir, run_subprocess
 from nilearn.plotting import plot_stat_map
 from nilearn.image import index_img
 

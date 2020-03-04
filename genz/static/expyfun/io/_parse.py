@@ -3,9 +3,9 @@
 """
 
 import ast
-from collections import OrderedDict
 import csv
 import json
+from collections import OrderedDict
 
 import numpy as np
 
