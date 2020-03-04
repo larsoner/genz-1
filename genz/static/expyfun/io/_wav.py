@@ -2,10 +2,11 @@
 """WAV file IO functions
 """
 
+import warnings
+from os import path as op
+
 import numpy as np
 from scipy.io import wavfile
-from os import path as op
-import warnings
 
 from .._utils import verbose_dec, logger, _has_scipy_version
 

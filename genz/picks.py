@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Write tsv files containing subject id & gender list."""
 
-import pandas as pd
-import numpy as np
-import seaborn as sns
 import pprint
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
 
 sns.set(style='ticks', color_codes=True)
 pd.set_option('display.max_rows', 500)

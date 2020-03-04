@@ -5,6 +5,7 @@
 
 from os import path as op
 from pathlib import Path
+
 import numpy as np
 
 static = op.join(Path(__file__).parents[0], 'static')

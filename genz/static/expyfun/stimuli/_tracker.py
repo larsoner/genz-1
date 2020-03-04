@@ -4,11 +4,12 @@
 #
 # License: BSD (3-clause)
 
-import numpy as np
-import time
-from scipy.stats import binom
 import json
+import time
 import warnings
+
+import numpy as np
+from scipy.stats import binom
 
 from .. import ExperimentController
 

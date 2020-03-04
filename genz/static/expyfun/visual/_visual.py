@@ -8,11 +8,12 @@
 
 # make RawImage work
 
+import warnings
 from ctypes import (cast, pointer, POINTER, create_string_buffer, c_char,
-                    c_int, c_float)
+                    c_int, c_float
+                    )
 from functools import partial
 
-import warnings
 import numpy as np
 
 from .._utils import check_units, string_types, logger

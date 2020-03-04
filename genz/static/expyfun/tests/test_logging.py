@@ -1,8 +1,8 @@
 import os
 import warnings
 
-from genz.static.expyfun import _TempDir, _hide_window
 from genz.static.expyfun import ExperimentController
+from genz.static.expyfun import _TempDir, _hide_window
 
 warnings.simplefilter('always')
 

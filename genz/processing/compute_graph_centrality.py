@@ -4,16 +4,16 @@
 """Write age cohort Graph Theoretical centrality metrics to disk"""
 
 import os.path as op
+import time
 
 import mne
 import networkx as nx
 import numpy as np
 import pandas as pd
 import xarray as xr
-import time
-
 from mne.externals.h5io import read_hdf5, write_hdf5
 from mnefun._mnefun import timestring
+
 from genz import defaults
 
 

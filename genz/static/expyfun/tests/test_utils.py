@@ -1,8 +1,21 @@
-from nose.tools import assert_true, assert_raises, assert_equal
+rom
+nose.tools
+import assert_true, assert_raises, assert_equal
 import os
 import warnings
 
-from genz.static.expyfun import get_config, set_config, deprecated, _fix_audio_dims
+from genz.static.expyfun import (get_config, set_config, deprecated,
+                                 _fix_audio_dims
+                                 )
+
+import os
+import warnings
+
+from nose.tools import assert_true, assert_raises, assert_equal
+
+from genz.static.expyfun import (get_config, set_config, deprecated,
+                                 _fix_audio_dims
+                                 )
 
 warnings.simplefilter('always')
 

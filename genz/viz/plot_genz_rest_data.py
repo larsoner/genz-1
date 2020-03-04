@@ -32,11 +32,9 @@ References
 
 import os.path as op
 
-from mne.filter import next_fast_len
-import matplotlib.pyplot as plt
-from mayavi import mlab
-
 import mne
+from mayavi import mlab
+from mne.filter import next_fast_len
 
 
 def plot_band(band):

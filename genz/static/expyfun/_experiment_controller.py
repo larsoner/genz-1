@@ -6,28 +6,30 @@
 #
 # License: BSD (3-clause)
 
-from collections import OrderedDict
 import inspect
 import json
 import os
 import sys
-import warnings
-from os import path as op
-from functools import partial
 import traceback as tb
+import warnings
+from collections import OrderedDict
+from functools import partial
+from os import path as op
 
 import numpy as np
 
+from ._git import assert_version, __version__
+from ._input_controllers import Keyboard, CedrusBox, Mouse
+from ._sound_controllers import PygletSoundController, SoundPlayer
+from ._tdt_controller import TDTController
+from ._trigger_controllers import ParallelTrigger
 from ._utils import (get_config, verbose_dec, _check_pyglet_version, wait_secs,
                      running_rms, _sanitize, logger, ZeroClock, date_str,
                      check_units, set_log_file, flush_logger,
-                     string_types, _fix_audio_dims, input, _get_args)
-from ._tdt_controller import TDTController
-from ._trigger_controllers import ParallelTrigger
-from ._sound_controllers import PygletSoundController, SoundPlayer
-from ._input_controllers import Keyboard, CedrusBox, Mouse
+                     string_types, _fix_audio_dims, input, _get_args
+                     )
 from .visual import Text, Rectangle, Video, _convert_color
-from ._git import assert_version, __version__
+
 
 # Note: ec._trial_progress has three values:
 # 1. 'stopped', which ec.identify_trial turns into...

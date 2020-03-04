@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 import os
-from os import path as op
 import warnings
+from os import path as op
 
 from nose.tools import assert_raises, assert_true, assert_equal
 
-from genz.static.expyfun import (ExperimentController, assert_version, download_version,
-                                 __version__)
+from genz.static.expyfun import (ExperimentController, assert_version,
+                                 download_version,
+                                 __version__
+                                 )
 from genz.static.expyfun import _TempDir
 from genz.static.expyfun import _has_git
 

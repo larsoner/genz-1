@@ -6,6 +6,7 @@
 """
 
 from os import path as op
+
 import numpy as np
 
 from .._utils import verbose_dec, logger

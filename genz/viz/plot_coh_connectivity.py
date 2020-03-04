@@ -14,6 +14,7 @@ __status__ = 'Development'
 import os.path as op
 import re
 
+import matplotlib.pyplot as plt
 import mne
 import numpy as np
 import pandas as pd
@@ -21,7 +22,7 @@ import seaborn as sns
 import xarray as xr
 from meeg_preprocessing import utils
 from surfer import Brain
-import matplotlib.pyplot as plt
+
 from genz import defaults
 
 sns.set_style('ticks')

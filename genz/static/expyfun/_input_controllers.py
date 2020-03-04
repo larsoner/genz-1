@@ -7,12 +7,14 @@
 #
 # License: BSD (3-clause)
 
-import numpy as np
 from functools import partial
 
-from .visual import (Triangle, Rectangle, Circle, Diamond, ConcentricCircles,
-                     FixationDot)
+import numpy as np
+
 from ._utils import wait_secs, clock, string_types
+from .visual import (Triangle, Rectangle, Circle, Diamond, ConcentricCircles,
+                     FixationDot
+                     )
 
 
 class Keyboard(object):

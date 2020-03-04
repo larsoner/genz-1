@@ -2,15 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import os.path as op
+
+import mne
 import numpy as np
 from autoreject import AutoReject
-import mne
+from meeg_preprocessing import config
 from mne import (
-    read_epochs, compute_rank
+    read_epochs
     )
 from mne.cov import regularize
 from mne.minimum_norm import make_inverse_operator, apply_inverse_epochs
-from meeg_preprocessing import config
+
 from genz import defaults
 
 

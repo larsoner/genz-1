@@ -3,10 +3,10 @@
 
 import numpy as np
 
-from ..visual import FixationDot
-from ..analyze import sigmoid
 from .._utils import logger, verbose_dec
+from ..analyze import sigmoid
 from ..stimuli import window_edges
+from ..visual import FixationDot
 
 
 def _check_pyeparse():

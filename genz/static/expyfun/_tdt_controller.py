@@ -7,14 +7,15 @@
 # License: BSD (3-clause)
 
 import time
-import numpy as np
-from os import path as op
-from functools import partial
-from copy import deepcopy
 import warnings
+from copy import deepcopy
+from functools import partial
+from os import path as op
 
-from ._utils import get_config, wait_secs, logger, ZeroClock
+import numpy as np
+
 from ._input_controllers import Keyboard
+from ._utils import get_config, wait_secs, logger, ZeroClock
 
 
 def _dummy_fun(self, name, ret, *args, **kwargs):

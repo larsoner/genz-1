@@ -38,15 +38,20 @@ __version__ = '3.4.0'
 
 __all__ = ["decorator", "FunctionMaker", "contextmanager"]
 
+import inspect
+import re
+import sys
 
-import sys, re, inspect
 if sys.version >= '3':
     from inspect import getfullargspec
+    
+    
     def get_init(cls):
         return cls.__init__
 else:
     class getfullargspec(object):
         "A quick and dirty replacement for getfullargspec for Python 2.X"
+        
         def __init__(self, f):
             self.args, self.varargs, self.varkw, self.defaults = \
                 inspect.getargspec(f)

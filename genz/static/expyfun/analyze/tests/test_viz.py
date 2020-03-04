@@ -1,9 +1,9 @@
-import numpy as np
-from os import path as op
-from nose.tools import assert_raises, assert_equal
 import warnings
+from os import path as op
 
 import matplotlib
+import numpy as np
+from nose.tools import assert_raises, assert_equal
 
 from genz.static import expyfun as ea
 from genz.static.expyfun import _TempDir, requires_lib

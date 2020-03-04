@@ -1,7 +1,8 @@
-from genz.static import expyfun
 import fnmatch
 import os
 from os import path as op
+
+from genz.static import expyfun
 
 
 def test_ascii():

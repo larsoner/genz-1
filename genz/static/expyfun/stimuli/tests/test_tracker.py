@@ -1,5 +1,6 @@
-import numpy as np
 import matplotlib
+import numpy as np
+
 matplotlib.use('Agg')  # noqa
 from genz.static.expyfun import TrackerUD, TrackerBinom, TrackerDealer
 from genz.static.expyfun import ExperimentController
