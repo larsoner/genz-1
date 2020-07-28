@@ -1,20 +1,23 @@
 """Process GenZ measures using sklearn."""
 
 import os.path as op
-import time
-
-import matplotlib.pyplot as plt
-import mne
 import numpy as np
-from h5io import read_hdf5, write_hdf5
 from scipy.stats import spearmanr
+import time
+from h5io import read_hdf5, write_hdf5
+import mne
+import matplotlib.pyplot as plt
+
+from sklearn.decomposition import PCA, FastICA  # noqa
+from sklearn.preprocessing import PolynomialFeatures  # noqa
+from sklearn.preprocessing import StandardScaler  # noqa
+
+from sklearn.svm import SVR, SVC, LinearSVC  # noqa
 from sklearn.linear_model import LogisticRegression  # noqa
-from sklearn.model_selection import (StratifiedKFold,
-                                     permutation_test_score  # noqa
-                                     )
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingClassifier  # noqa
+from sklearn.model_selection import StratifiedKFold, cross_val_score, permutation_test_score  # noqa
 from sklearn.pipeline import make_pipeline
 
-from genz.defaults import datadir
 
 ages = (9, 11, 13, 15, 17)
 freq_idx = [4, 5]  # np.arange(6)  # use all freq ranges
@@ -24,11 +27,11 @@ scoring = 'balanced_accuracy'
 n_jobs = 4
 plot_brains = False
 plot_correlations = True
-subjects_dir = mne.datasets.sample.data_path() + '/subjects'
+
 freqs = ['DC', 'delta', 'theta', 'alpha', 'beta', 'gamma']
-labels = mne.read_labels_from_annot('fsaverage', 'aparc_sub',
-                                    subjects_dir=subjects_dir)
+labels = mne.read_labels_from_annot('fsaverage', 'aparc_sub')
 labels = [label for label in labels if 'unknown' not in label.name]
+
 ###############################################################################
 # Load data
 # ---------
@@ -37,16 +40,15 @@ X, y = [list() for _ in range(len(ages))], list()
 for ai, age in enumerate(ages):
     shape = None
     for mi, measure in enumerate(measures):
-        fast_fname = op.join(datadir, 'genz_%s_%s_fast.h5' % (age, measure))
-        if not op.isfile(op.join(datadir, fast_fname)):
+        fast_fname = 'genz_%s_%s_fast.h5' % (age, measure)
+        if not op.isfile(fast_fname):
             print('Converting %s measure %s' % (age, measure))
-            data = read_hdf5(op.join(datadir,
-                                     'genz_%s_%s.h5' % (age, measure)))
+            data = read_hdf5('genz_%s_%s.h5' % (age, measure))
             data = data['data_vars'][measure]['data']
             data = np.array(data)
             assert data.dtype == np.float
             write_hdf5(fast_fname, data)
-        data = read_hdf5(op.join(datadir, fast_fname))
+        data = read_hdf5(fast_fname)
         if shape is None:
             shape = data.shape
             assert shape[-1] == 2
@@ -143,13 +145,3 @@ if plot_correlations:
     for key in ('top', 'right'):
         ax.spines[key].set_visible(False)
     fig.tight_layout()
-
-
-from surfer import Brain
-roi = [ll for ll in labels if ll.name == 'superiorfrontal_17-lh']
-
-r = Brain('fsaverage', 'both', 'inflated', subjects_dir=subjects_dir,
-          background='white', size=(800, 600))
-r.show_view(view='dorsal')
-r.add_label(roi[0])
-

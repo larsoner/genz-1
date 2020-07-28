@@ -122,3 +122,12 @@ genz/figures/
 !/genz/figures/
 
 .idea/
+
+# Atom
+.ropeproject/
+
+.vscode/settings.json
+data/*.mat
+/genz/data/
+*.m~
+/genz/processing/*.m~
