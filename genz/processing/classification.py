@@ -52,7 +52,7 @@ for ai, age in enumerate(ages):
             assert shape[-1] == 2
         assert data.shape == shape
         assert data.ndim == 4
-        data = data[freq_idx]  # only use these freqs
+        #data = data[freq_idx]  # only use these freqs
         # deal with reordering (undo it to restore original order)
         order = np.argsort(data[:, :, :, 0], axis=-1)
         data = data[..., 1]
