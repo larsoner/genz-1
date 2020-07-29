@@ -11,7 +11,7 @@ import numpy as np
 static = op.join(Path(__file__).parents[0], 'static')
 datadir = op.join(Path(__file__).parents[0], 'data')
 figs_dir = op.join(Path(__file__).parents[0], 'figures')
-megdata = '/mnt/jaba/meg/genz_resting'
+megdata = '/media/ktavabi/ALAYA/data/ilabs/genz_resting'
 subjects_dir = '/mnt/jaba/meg/genz/anatomy'
 exclude = ['104_9a',  # Too few EOG events
            '108_9a',  # Fix
