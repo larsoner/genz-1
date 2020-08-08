@@ -23,23 +23,22 @@ def sort_dict(dd, reverse=True):
 
 
 # Load labels
-fslabels = mne.read_labels_from_annot('fsaverage',
-                                      'aparc_sub', 'both',
-                                      subjects_dir=defaults.subjects_dir)
-fslabels = [label for label in fslabels
+labels = mne.read_labels_from_annot('fsaverage',
+                                      'aparc_sub', 'both')
+labels = [label for label in fslabels
             if not label.name.startswith('unknown')]
-label_nms = [rr.name for rr in fslabels]
+label_nms = [rr.name for rr in labels]
 picks = pd.read_csv(op.join(defaults.static, 'picks.tsv'), sep='\t')
 picks.drop(picks[picks.id.isin(defaults.exclude)].index, inplace=True)
 picks.sort_values(by='id', inplace=True)
 dt = np.dtype('int, float')
-dims = ['band', 'subject', 'roi']
+dims = ['subject', 'band', 'roi']
 bands = list(defaults.bands.keys())
 
 for aix, age in enumerate(defaults.ages):
     subjects = ['genz%s' % ss for ss in picks[picks.ag == age].id]
     print('  Loading %s years-old data.' % age)
-    coords = [bands, subjects, np.arange(len(label_nms))]
+    coords = [subjects, bands,  np.arange(len(label_nms))]
     t0 = time.time()
     for ix, band in enumerate(bands):
         print('     Computing %s band centrality measures...' % band)
@@ -54,8 +53,8 @@ for aix, age in enumerate(defaults.ages):
             mask = np.where(corr >= np.percentile(corr, 20), 1, 0)
             adj = np.ma.masked_array(corr, mask).mask
             G = nx.from_numpy_matrix(adj.astype(int), parallel_edges=False)
-            if ix == 0 and iix == 0:
-                betweeness = np.zeros((len(bands), len(subjects),
+            if iix == 0 and ix == 0:
+                betweeness = np.zeros((len(subjects), len(bands),
                                        len(label_nms)),
                                       dtype=dt)
                 betweeness.dtype.names = ['label', 'value']
@@ -64,18 +63,18 @@ for aix, age in enumerate(defaults.ages):
                 triangles = np.zeros_like(betweeness)
                 clustering = np.zeros_like(betweeness)
             # Betweenness centrality - brokers/bridges
-            betweeness[ix, iix] = np.array(sort_dict(
+            betweeness[iix, ix] = np.array(sort_dict(
                 nx.betweenness_centrality(G, normalized=False)), dtype=dt)
             # Eigenvector centrality - hubs
             eigenvector = sort_dict(nx.eigenvector_centrality(G))
-            hubness[ix, iix] = np.array(eigenvector, dtype=dt)
+            hubness[iix, ix] = np.array(eigenvector, dtype=dt)
             # Closeness
-            closeness[ix, iix] = np.array(sort_dict(nx.closeness_centrality(G)),
+            closeness[iix, ix] = np.array(sort_dict(nx.closeness_centrality(G)),
                                           dtype=dt)
             # Local clustering
-            triangles[ix, iix] = np.array(sort_dict(nx.triangles(G)), dtype=dt)
+            triangles[iix, ix] = np.array(sort_dict(nx.triangles(G)), dtype=dt)
             clusters = nx.clustering(G)
-            clustering[ix, iix] = np.array([(x, clusters[x]) for x in
+            clustering[iix, ix] = np.array([(x, clusters[x]) for x in
                                             sorted(list(G.nodes),
                                                    key=lambda x: eigenvector[x],
                                                    reverse=True)], dtype=dt)
