@@ -2,18 +2,21 @@
 # -*- coding: utf-8 -*-
 
 import os.path as op
-
+import itertools
 import mne
 import numpy as np
 from autoreject import AutoReject
 from meeg_preprocessing import config
-from mne import (
-    read_epochs
-    )
+from mne import read_epochs
 from mne.cov import regularize
 from mne.minimum_norm import make_inverse_operator, apply_inverse_epochs
 
 from genz import defaults
+
+
+def expand_grid(data_dict):
+    rows = itertools.product(*data_dict.values())
+    return pd.DataFrame.from_records(rows, columns=data_dict.keys())
 
 
 def compute_adjacency_matrix(connectivity, threshold_prop=0.2):
