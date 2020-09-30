@@ -135,3 +135,5 @@ data/*.mat
 # Project data
 *.h5
 
+genz/genz.code-workspace
+demografix_ASOSt1_profile.html
