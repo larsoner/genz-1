@@ -2,15 +2,6 @@
 
 """Adolescent resting state MEG data MNEFUN processing pipeline."""
 
-__author__ = "Kambiz Tavabi"
-__copyright__ = "Copyright 2018, Seattle, Washington"
-__credits__ = ["Goedel", "Escher", "Bach"]
-__license__ = "MIT"
-__version__ = "1.0.1"
-__maintainer__ = "Kambiz Tavabi"
-__email__ = "ktavabi@uw.edu"
-__status__ = "Development"
-
 import os.path as op
 
 import mnefun
@@ -25,8 +16,7 @@ params = mnefun.Params(n_jobs=18,
                        tmin=-.2, tmax=.2)
 
 # write prebads
-picks = pd.read_csv('/home/ktavabi/Github/genz/static/picks.tsv', sep='\t',
-                    usecols=['id', 'badChs'])
+picks = pd.read_csv('/home/ktavabi/Github/genz/static/picks.csv' usecols=['id', 'badChs'])
 exclude = ['104_9a',  # Too few EOG events
            '108_9a',  # Fix
            '113_9a',  # Too few ECG events
