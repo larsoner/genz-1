@@ -25,13 +25,13 @@ from genz import (
     defaults, funcs
     )
 
-utils.setup_mpl_rcparams(font_size=10)
 
 new_sfreq = defaults.new_sfreq
 n_fft = next_fast_len(int(round(4 * new_sfreq)))
 lims = [75, 85, 95]
 medial_verts = get_fsaverage_medial_vertices()
 # Load labels
+
 fslabels = mne.read_labels_from_annot('fsaverage',
                                       'aparc_sub', 'both',
                                       subjects_dir=defaults.subjects_dir)
@@ -47,6 +47,7 @@ for aix, age in enumerate(defaults.ages):
                         len(fslabels)))
     corr_mats = np.zeros((len(subjects), len(defaults.bands), len(fslabels),
                           len(fslabels)))
+    X = funcs.expand_grid({'sid': subjects, 'freq': defaults.bands, 'roi': label_nms})
     for si, subject in enumerate(subjects):
         bem_dir = os.path.join(defaults.subjects_dir, subject, 'bem')
         bem_fname = os.path.join(bem_dir, '%s-5120-bem-sol.fif' % subject)
@@ -78,7 +79,7 @@ for aix, age in enumerate(defaults.ages):
         raw_erm.load_data().resample(new_sfreq, n_jobs=config.N_JOBS)
         raw_erm.add_proj(raw.info['projs'])
         # ERM covariance
-        cov = compute_raw_covariance(raw_erm, n_jobs=12,
+        cov = compute_raw_covariance(raw_erm, n_jobs=config.N_JOBS,
                                      reject=dict(grad=4000e-13,
                                                  mag=4e-12),
                                      flat=dict(grad=1e-13, mag=1e-15))
@@ -98,4 +99,7 @@ for aix, age in enumerate(defaults.ages):
                                                        eps_fname, fslabels,
                                                        return_generator=True)
             corr_mats[si, ix] = envelope_correlation(label_ts)
-            
+    y = pd.DataFrame({"aec": corr_mats.flatten()})
+    X['aec'] = y.apply(lambda data: np.array(data))
+    
+    X.to_csv(op.join(defaults.datadir, 'bandpass_aec-0%dyo.csv' % age))

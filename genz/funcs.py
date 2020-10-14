@@ -15,6 +15,7 @@ from genz import defaults
 
 
 def expand_grid(data_dict):
+    import pandas as pd
     rows = itertools.product(*data_dict.values())
     return pd.DataFrame.from_records(rows, columns=data_dict.keys())
 
@@ -67,7 +68,7 @@ def extract_labels_timeseries(subj, r, highpass, lowpass, cov, fwd,
     epochs = read_epochs(fname)
     print('%d, %d (Epochs, drops)' %
           (len(events), len(events) - len(epochs.selection)))
-    epochs.plot_psd()
+    #epochs.plot_psd()
     idx = np.setdiff1d(np.arange(len(events)), epochs.selection)
     # r = r.copy().filter(lf, hf, fir_window='blackman',
     #                       method='iir', n_jobs=config.N_JOBS)
@@ -75,9 +76,9 @@ def extract_labels_timeseries(subj, r, highpass, lowpass, cov, fwd,
     epochs_ = epochs.copy().filter(highpass, lowpass, method='iir',
                                    iir_params=iir_params,
                                    n_jobs=config.N_JOBS)
-    epochs_.plot_psd(average=True, spatial_colors=False)
+    #epochs_.plot_psd(average=True, spatial_colors=False)
     mne.Info.normalize_proj(epochs_.info)
-    epochs_.plot_projs_topomap()
+    #epochs_.plot_projs_topomap()
     # regularize covariance
     # rank = compute_rank(cov, rank='full', info=epochs_.info)
     cov = regularize(cov, r.info)

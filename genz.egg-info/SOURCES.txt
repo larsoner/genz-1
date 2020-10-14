@@ -15,10 +15,12 @@ genz/processing/compute_evoked_ers.py
 genz/processing/compute_graph_centrality.py
 genz/processing/compute_graph_globals.py
 genz/processing/compute_graph_netwok_metrics.py
+genz/processing/compute_pairwise_roi_aec.py
 genz/processing/compute_psd_connectivity.py
 genz/processing/menfun.py
 genz/processing/networkx_tutorial.py
 genz/processing/sandbox.py
+genz/processing/tidy-centrality-metrics.py
 genz/processing/write_label_timeseries.py
 genz/static/__init__.py
 genz/static/resting_state_pdm.py
