@@ -1,20 +1,30 @@
-# To add a new cell, type '# %%'
-# To add a new markdown cell, type '# %% [markdown]'
-
 # %%
-import xarray as xr
+import itertools
 import os.path as op
 import pprint
+import time
 
 import janitor
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
 import seaborn as sns
-from pandas_profiling import ProfileReport
-
+import xarray as xr
 from genz import defaults
-
+from numpy import mean, std
+from pandas_profiling import ProfileReport
+from sklearn.compose import make_column_transformer
+from sklearn.experimental import enable_hist_gradient_boosting  # noqa
+from sklearn.ensemble import (HistGradientBoostingRegressor,
+                              RandomForestRegressor, StackingRegressor)
+from sklearn.impute import SimpleImputer
+# %%
+from sklearn.linear_model import Lasso, LassoCV, RidgeCV
+from sklearn.model_selection import GridSearchCV, KFold
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
+from sklearn.utils import shuffle
 
 # %%
 sns.set(style='ticks', color_codes=True)
@@ -22,6 +32,7 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.width', 1000)
 pd.set_option('precision', 2)
+seed = np.random.seed(42)
 
 
 @pf.register_dataframe_method
@@ -99,7 +110,6 @@ def str_word(
     return df
 
 
-
 # %%
 idcol = ['id']
 features = ['gender',
@@ -154,9 +164,9 @@ for age in defaults.ages:
     dfs.append(tmp)
 df = pd.concat(dfs, ignore_index=True)
 df = (df.clean_names()
-    .rename_columns({"subject_number": "id"})
-    .str_remove('id', pattern='GenZ_')
-)
+      .rename_columns({"subject_number": "id"})
+      .str_remove('id', pattern='GenZ_')
+      )
 df.head(3)
 
 # %%
@@ -197,12 +207,17 @@ df_final = (
     )
     .drop_duplicates(keep='first')
     .str_slice('roi', stop=-3)
+    .rename_columns({'age_months_at_enrollement': 'age_mos',
+                     'age_years_at_enrollement': 'age_yrs'})
+    .remove_columns(column_names=['age_x', 'age_y', 'sex'])
+    .dropna(subset=['traitanxiety', 'stateanxiety'])
+    .change_type('gender', str)
     .reset_index(drop=True)
     .sort_naturally('id')
 )
-
 df_final.head(3)
 df_final.to_csv(op.join(defaults.payload, 'nxDegree-ASOSt1.csv'))
+
 
 # %%
 # kwargs = {'interactions': {'targets': features}}
@@ -213,5 +228,5 @@ report = df_final.profile_report(title='Data profile',
                                  config_file=op.join(
                                      defaults.processing, 'profiler-config.yaml'),
                                  )
+report.to_file(op.join(defaults.payload, 'nxDegree-ASOSt1_profile.html'))
 
-#report.to_file(op.join(defaults.payload, 'nxDegree-ASOSt1_profile.html'))
