@@ -4,8 +4,8 @@
 """Compute narrow-band envelope correlation matrices
 For each subject, epoch raw into 5 sec trials, compute erm covariance,
 use Autoreject to clean up wide band epoched data. For each discrete frequency band
-regularize covariance, compute inverse, compute pairwise power correlation between 
-Freesurfer aparc_sub ROIs.
+regularize covariance, compute inverse, compute pairwise power correlation between ROI 
+label timeseries extracted from Freesurfer aparc_sub ROIs.
 """
 
 import os
@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import mne
 import numpy as np
 import pandas as pd
+from scipy.sparse import csgraph
+
 from meeg_preprocessing import (config, utils)
 from mne import compute_raw_covariance
 from mne.connectivity import envelope_correlation
@@ -43,11 +45,8 @@ picks.drop(picks[picks.id.isin(defaults.exclude)].index, inplace=True)
 picks.sort_values(by='id', inplace=True)
 for aix, age in enumerate(defaults.ages):
     subjects = ['genz%s' % ss for ss in picks[picks.ag == age].id]
-    degrees = np.zeros((len(subjects), len(defaults.bands),
-                        len(fslabels)))
-    corr_mats = np.zeros((len(subjects), len(defaults.bands), len(fslabels),
+    data = np.zeros((len(subjects), len(defaults.bands), len(fslabels),
                           len(fslabels)))
-    X = funcs.expand_grid({'sid': subjects, 'freq': defaults.bands, 'roi': label_nms})
     for si, subject in enumerate(subjects):
         bem_dir = os.path.join(defaults.subjects_dir, subject, 'bem')
         bem_fname = os.path.join(bem_dir, '%s-5120-bem-sol.fif' % subject)
@@ -98,8 +97,9 @@ for aix, age in enumerate(defaults.ages):
                                                        defaults.subjects_dir,
                                                        eps_fname, fslabels,
                                                        return_generator=True)
-            corr_mats[si, ix] = envelope_correlation(label_ts)
-    y = pd.DataFrame({"aec": corr_mats.flatten()})
-    X['aec'] = y.apply(lambda data: np.array(data))
-    
-    X.to_csv(op.join(defaults.datadir, 'bandpass_aec-0%dyo.csv' % age))
+            aec = envelope_correlation(label_ts)
+            data[si, ix] = csgraph.laplacian(aec, normed=False)
+    X = funcs.expand_grid({'sid': subjects, 'freq': defaults.bands})
+    y = pd.DataFrame({"lap": data.flatten()})
+    X['lap'] = y.apply(lambda data: np.array(data))    
+    X.to_csv(op.join(defaults.datadir, 'nxLaplns-0%dyo.csv' % age))
