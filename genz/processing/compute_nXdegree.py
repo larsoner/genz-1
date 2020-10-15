@@ -109,9 +109,9 @@ for si, ss in enumerate(df.id.values):
                                                     return_generator=True)
         aec = envelope_correlation(label_ts)
         assert aec.shape == (len(fslabels), len(fslabels))
-        degree, _ = csgraph.laplacian(aec, return_diag=True)
+        _, deg = csgraph.laplacian(aec, return_diag=True)
         ###############ref Cedric & Stack#############
-        data[si, ix] = degree
+        data[si, ix] = deg
 xs = funcs.expand_grid({'id': df.id.values, 'freq': defaults.bands, 'roi': label_nms})
 ys = pd.Series(data) 
 pd.concat([xs, ys], axis=1).to_csv(op.join(defaults.payload, 'nxLaplnsXroi.csv'))
