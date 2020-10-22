@@ -1,27 +1,27 @@
 # %%
-import itertools
 import os.path as op
-import pprint
-import time
 
-import janitor
 import matplotlib.pyplot as plt
+
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
+import janitor
+
 import seaborn as sns
 import xarray as xr
 from genz import defaults
 from numpy import mean, std
 from pandas_profiling import ProfileReport
+from sklearn import datasets, svm
 from sklearn.compose import make_column_transformer
 from sklearn.experimental import enable_hist_gradient_boosting  # noqa
 from sklearn.ensemble import (HistGradientBoostingRegressor,
                               RandomForestRegressor, StackingRegressor)
+from sklearn.experimental import enable_hist_gradient_boosting  # noqa
 from sklearn.impute import SimpleImputer
-# %%
 from sklearn.linear_model import Lasso, LassoCV, RidgeCV
-from sklearn.model_selection import GridSearchCV, KFold
+from sklearn.model_selection import GridSearchCV, KFold, cross_val_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from sklearn.utils import shuffle
@@ -59,7 +59,6 @@ def str_remove(df, column_name: str, pattern: str = ''):
     return df
 
 
-# %%
 @pf.register_dataframe_method
 def str_slice(df, column_name: str, start: int = 0, stop: int = -1):
     """Slice a column of strings by indexes
@@ -84,7 +83,6 @@ def str_slice(df, column_name: str, start: int = 0, stop: int = -1):
     return df
 
 
-# %%
 @pf.register_dataframe_method
 def str_word(
     df,
@@ -110,9 +108,39 @@ def str_word(
     return df
 
 
+@pf.register_dataframe_method
+def explode(df: pd.DataFrame, column_name: str, sep: str):
+    """
+    For rows with a list of values, this function will create new rows for each value in the list
+
+    :param df: A pandas DataFrame.
+    :param column_name: A `str` indicating which column the string removal action is to be made.
+    :param sep: The delimiter. Example delimiters include `|`, `, `, `,` etc.
+    """
+
+    df["id"] = df.index
+    wdf = (
+        pd.DataFrame(df[column_name].str.split(sep).fillna("").tolist())
+        .stack()
+        .reset_index()
+    )
+    # exploded_column = column_name
+    wdf.columns = ["id", "depth", column_name]  # plural form to singular form
+    # wdf[column_name] = wdf[column_name].apply(lambda x: x.strip())  # trim
+    wdf.drop("depth", axis=1, inplace=True)
+
+    return pd.merge(df, wdf, on="id", suffixes=("_drop", "")).drop(
+        columns=["id", column_name + "_drop"]
+    )
+
+
 # %%
-idcol = ['id']
-features = ['gender',
+asos = (
+    pd.read_excel(op.join(defaults.static, 'Mlab-ASOSt1.xlsx'))
+    .clean_names()
+    .str_remove('id', pattern='GenZ_')
+    .remove_empty()
+    .select_columns(['id','gender',
             'peermindset',
             'persmindset',
             'needforapproval',
@@ -128,24 +156,38 @@ features = ['gender',
             'moodhappy',
             'moodrelaxed',
             'stateanxiety',
-            'traitanxiety']
-
-# %%
-bsdf = (
-    pd.read_excel(op.join(defaults.static, 'Mlab-ASOSt1.xlsx'))
-    .clean_names()
-    .str_remove('id', pattern='GenZ_')
-    .remove_empty()
-    .select_columns(idcol + features)
+            'traitanxiety'])
     .encode_categorical(['gender'])
-    .reset_index(drop=True)
+    .set_index('id')
 )
 
-bsdf.head(3)
-
+asos.head(3)
 
 # %%
-# merge with RA spreadsheets
+df = (
+    pd.read_csv(op.join(defaults.payload, 'degrees.csv'))
+    #.row_to_names(row_number=1, remove_row=False)
+    .str_remove('id', pattern='GenZ_')
+    .clean_names()
+    .remove_columns(['unnamed_0'])
+    .deconcatenate_column(
+         column_name='roi', new_column_names=['label', 'hemi'],
+         sep='-', preserve_position=True
+     )
+    .dropna()
+    .label_encode(column_names=['freq', 'label', 'hemi'])
+    .encode_categorical(columns=['freq', 'label', 'hemi'])
+    .groupby(['id', 'label_enc'])
+    .agg(['mean'])
+    .collapse_levels(sep='_')
+    .remove_columns(['freq_enc_mean', 'hemi_enc_mean'])
+    .rename_columns({'deg_mean': 'Avg_deg'})
+)
+df.reset_index(inplace=True)
+df.head()
+
+# %%
+# merge with RA spreadsheets & MEG frames
 dfs = []
 for age in defaults.ages:
     fi = op.join(defaults.static,
@@ -162,71 +204,26 @@ for age in defaults.ages:
         tmp[cn] = pd.to_numeric(tmp[cn], errors='coerce')
     tmp.insert(len(tmp.columns), 'age', np.repeat(age, len(tmp)))
     dfs.append(tmp)
-df = pd.concat(dfs, ignore_index=True)
-df = (df.clean_names()
-      .rename_columns({"subject_number": "id"})
-      .str_remove('id', pattern='GenZ_')
-      )
-df.head(3)
-
-# %%
-# picks from resting MEG datasets
-temp = pd.DataFrame({'id': defaults.picks})
-temp = temp.join(df.set_index('id'), on='id', how='inner')
-
-data = (
-    temp.join(bsdf.set_index('id'), on='id', how='inner')
+df_ = (
+    pd.concat(dfs, ignore_index=True)
     .clean_names()
-    .encode_categorical(['age', 'gender']))
-data.head(3)
-
-
-# %%
-tmp = list()
-for aix, age in enumerate(defaults.ages):
-    with xr.open_dataset(op.join(defaults.payload,
-                                 'genz_%s_degree.nc' % age)) as ds:
-        df_ = ds.to_dataframe().reset_index()
-        df_['age'] = np.ones(len(df_)) * age
-        tmp.append(df_)
-df = pd.concat(tmp)
-df = (
-    df.clean_names()
-    .str_remove('id', pattern='genz')
-    .reset_index(drop=True)
+    .rename_columns({"subject_number": "id", 'age_months_at_enrollement': 'mos', 'age_years_at_enrollement': 'yrs'})
+    .str_remove('id', pattern='GenZ_')
+    .set_index('id')
 )
-df['hemisphere'] = df['roi'].str[-2:]
 
-df.head(3)
-
-
-# %%
-df_final = (
-    pd.merge(
-        data, df, how='right', on='id'
-    )
-    .drop_duplicates(keep='first')
-    .str_slice('roi', stop=-3)
-    .rename_columns({'age_months_at_enrollement': 'age_mos',
-                     'age_years_at_enrollement': 'age_yrs'})
-    .remove_columns(column_names=['age_x', 'age_y', 'sex'])
-    .dropna(subset=['traitanxiety', 'stateanxiety'])
-    .change_type('gender', str)
-    .reset_index(drop=True)
-    .sort_naturally('id')
-)
-df_final.head(3)
-df_final.to_csv(op.join(defaults.payload, 'nxDegree-ASOSt1.csv'))
-
+meg = df_.merge(df.set_index('id'),right_index=True, left_index=True)
+data = meg.merge(asos, right_index=True, left_index=True)
+data.head(15)
+data.to_csv(op.join(defaults.payload, 'Avg_roi_degree_asost1.csv'))
 
 # %%
-# kwargs = {'interactions': {'targets': features}}
-report = df_final.profile_report(title='Data profile',
-                                 minimal=False, explorative=True,
-                                 sensitive=False, dark_mode=False,
-                                 orange_mode=True,
-                                 config_file=op.join(
-                                     defaults.processing, 'profiler-config.yaml'),
-                                 )
-report.to_file(op.join(defaults.payload, 'nxDegree-ASOSt1_profile.html'))
-
+report = data.profile_report(title='Data profile',
+                             minimal=False, explorative=True,
+                             sensitive=False, dark_mode=False,
+                             orange_mode=True,
+                             config_file=op.join(
+                                 defaults.processing, 'profiler-config.yaml'),
+                             )
+report.to_file(op.join(defaults.payload, 'Avg_roi_degree_asost1.html'))
+# %%

@@ -1,4 +1,34 @@
 # %%
+import os.path as op
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import pandas_flavor as pf
+import seaborn as sns
+from genz import defaults
+from numpy import mean, std
+from sklearn.compose import make_column_transformer
+from sklearn.experimental import enable_hist_gradient_boosting  #noqa
+from sklearn.ensemble import (HistGradientBoostingRegressor,
+                              RandomForestRegressor, StackingRegressor)
+from sklearn.experimental import enable_hist_gradient_boosting  #noqa
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import Lasso, LassoCV, RidgeCV
+from sklearn.model_selection import GridSearchCV, KFold
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import (OneHotEncoder, OrdinalEncoder, StandardScaler)
+from sklearn.utils import shuffle
+
+# %%
+sns.set(style='ticks', color_codes=True)
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 100)
+pd.set_option('display.width', 1000)
+pd.set_option('precision', 2)
+seed = np.random.seed(42)
+
 features = ['id',
             'gender',
             'peermindset',
@@ -17,84 +47,24 @@ features = ['id',
             'moodrelaxed',
             'stateanxiety',
             'roi',
-            'hemisphere',
-            'degree']
+            'hem',
+            'deg']
 target = ['traitanxiety']
 
-X = df_final[features][:600]
-y = df_final[target][:600]
-shuffle(X, y, random_state=seed)
 
 # %%
-cat_cols = X.columns[X.dtypes == 'O']
-num_cols = X.columns[X.dtypes == 'float64']
-
-categories = [
-    X[column].unique() for column in X[cat_cols]]
-
-for cat in categories:
-    cat[cat == None] = 'missing'  # noqa
-
-cat_proc_nlin = make_pipeline(
-    SimpleImputer(missing_values=None, strategy='constant',
-                  fill_value='missing'),
-    OrdinalEncoder(categories=categories)
-)
-
-num_proc_nlin = make_pipeline(SimpleImputer(strategy='mean'))
-
-cat_proc_lin = make_pipeline(
-    SimpleImputer(missing_values=None,
-                  strategy='constant',
-                  fill_value='missing'),
-    OneHotEncoder(categories=categories)
-)
-
-num_proc_lin = make_pipeline(
-    SimpleImputer(strategy='mean'),
-    StandardScaler()
-)
-
-# transformation to use for non-linear estimators
-processor_nlin = make_column_transformer(
-    (cat_proc_nlin, cat_cols),
-    (num_proc_nlin, num_cols),
-    remainder='passthrough')
-
-# transformation to use for linear estimators
-processor_lin = make_column_transformer(
-    (cat_proc_lin, cat_cols),
-    (num_proc_lin, num_cols),
-    remainder='passthrough')
-
-# %%
-alphas = np.logspace(-4, -0.5, 30)
 tuned_parameters = [{}]
 n_folds = 5
-lasso_pipeline = make_pipeline(processor_lin,
-                               LassoCV(random_state=seed, max_iter=10000,
-                               alphas=alphas))
 
-clf = GridSearchCV(lasso_pipeline, tuned_parameters, cv=n_folds, refit=False)
-clf.fit(X, y)
-scores = clf.cv_results_['mean_test_score']
-scores_std = clf.cv_results_['std_test_score']
 plt.figure().set_size_inches(8, 6)
-plt.semilogx(alphas, scores)
 
 # plot error lines showing +/- std. errors of the scores
 std_error = scores_std / np.sqrt(n_folds)
 
-plt.semilogx(alphas, scores + std_error, 'b--')
-plt.semilogx(alphas, scores - std_error, 'b--')
 
 # alpha=0.2 controls the translucency of the fill color
-plt.fill_between(alphas, scores + std_error, scores - std_error, alpha=0.2)
-
 plt.ylabel('CV score +/- std error')
-plt.xlabel('alpha')
 plt.axhline(np.max(scores), linestyle='--', color='.5')
-plt.xlim([alphas[0], alphas[-1]])
 
 # %%
 
