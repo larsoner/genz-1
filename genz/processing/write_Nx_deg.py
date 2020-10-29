@@ -9,7 +9,8 @@ label timeseries extracted from Freesurfer aparc_sub ROIs.
 
 import os
 import os.path as op
-
+import warnings
+            
 import matplotlib.pyplot as plt
 import mne
 import numpy as np
@@ -117,9 +118,21 @@ for si, ss in enumerate(df.id.values):
         _, deg = csgraph.laplacian(aec, return_diag=True)
         ###############ref Cedric & Stack#############
         data[si, ix] = deg
+        threshold_prop = 0.15  # percentage of strongest edges to keep in the graph
+        degree = mne.connectivity.degree(corr, threshold_prop=threshold_prop)
+        if not np.allclose(deg, degree):
+            warnings.warn('mne.connectivity.degree NOT equal to csgraph.laplacian')
+        stc = mne.labels_to_stc(labels, degree)
+        stc = stc.in_label(mne.Label(inv['src'][0]['vertno'], hemi='lh') +
+                        mne.Label(inv['src'][1]['vertno'], hemi='rh'))
+        brain = stc.plot(
+            clim=dict(kind='percent', lims=[75, 85, 95]), colormap='gnuplot',
+            subjects_dir=subjects_dir, views='dorsal', hemi='both',
+            smoothing_steps=25, time_label='%s band' % kk)
+        brain.savefig(op.join(defaults.payload, 'degree-%s.png' % kk))
 foo = funcs.expand_grid({"id": df.id.values, "freq": defaults.bands, "roi": label_nms})
 foo["deg"] = pd.Series(data.flatten())
-foo.to_csv(op.join(defaults.payload, "nxLaplnsXroi-tidy.csv"))
+foo.to_csv(op.join(defaults.payload, "degree_x_frequency-roi.csv"))
 # bar = foo.pivot_table("deg", "id", ["freq", "roi"], aggfunc="first").to_csv(
 #     op.join(defaults.payload, "nxLaplnsXroi-wide.csv")
 # )
