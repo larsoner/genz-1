@@ -27,7 +27,6 @@ from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from sklearn.utils import shuffle
 
 # %%
-sns.set(style='ticks', color_codes=True)
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.width', 1000)
@@ -164,9 +163,9 @@ asos = (
 asos.head(3)
 
 # %%
-df = (
-    pd.read_csv(op.join(defaults.payload, 'degrees.csv'))
-    #.row_to_names(row_number=1, remove_row=False)
+mapping = {-9999.0: np.nan, 0.0: np.nan}
+degrees = (
+    pd.read_csv(op.join(defaults.payload, 'degree_x_frequency-roi.csv'))
     .str_remove('id', pattern='GenZ_')
     .clean_names()
     .remove_columns(['unnamed_0'])
@@ -174,18 +173,44 @@ df = (
          column_name='roi', new_column_names=['label', 'hemi'],
          sep='-', preserve_position=True
      )
+    .find_replace(
+        deg=mapping)
     .dropna()
-    .label_encode(column_names=['freq', 'label', 'hemi'])
-    .encode_categorical(columns=['freq', 'label', 'hemi'])
-    .groupby(['id', 'label_enc'])
-    .agg(['mean'])
-    .collapse_levels(sep='_')
-    .remove_columns(['freq_enc_mean', 'hemi_enc_mean'])
-    .rename_columns({'deg_mean': 'Avg_deg'})
-)
-df.reset_index(inplace=True)
-df.head()
+    .impute(column_name='deg', statistic_column_name='mean')
+    .rename_columns({'freq': 'nx', 'label': 'node',})
+    .label_encode(column_names=['nx', 'node', 'hemi'])
+    .encode_categorical(columns=['nx', 'node', 'hemi'])
+    .sort_naturally("id")
+    .set_index('id')
+    )
 
+degrees.head()
+
+
+# %%
+# social
+behavior = (
+    pd.read_excel(op.join(defaults.static, 'behavior.xlsx'), sheet_name='behavior',
+    header=None)
+    .row_to_names(0)
+    .clean_names()
+    .str_remove('id', pattern='GenZ_')
+    .dropna()
+)
+behavior.head()
+
+# %%
+social = (
+    pd.read_excel(op.join(defaults.static, 'behavior.xlsx'), sheet_name='social',
+    header=None)
+    .row_to_names(0)
+    .clean_names()
+    .str_remove('id', pattern='GenZ_')
+    .dropna()
+)
+
+behavior_soc = behavior.set_index('id').merge(social.set_index('id'), right_index=True, left_index=True)
+behavior_soc.head(10)
 # %%
 # merge with RA spreadsheets & MEG frames
 dfs = []
@@ -212,10 +237,11 @@ df_ = (
     .set_index('id')
 )
 
-meg = df_.merge(df.set_index('id'),right_index=True, left_index=True)
-data = meg.merge(asos, right_index=True, left_index=True)
-data.head(15)
-data.to_csv(op.join(defaults.payload, 'Avg_roi_degree_asost1.csv'))
+df = df_.merge(degrees,right_index=True, left_index=True)
+meg_asos = df.merge(asos, right_index=True, left_index=True)
+data = meg_asos.merge(behavior_soc, right_index=True, left_index=True)
+data.sample(15)
+data.to_csv(op.join(defaults.payload, 'data.csv'))
 
 # %%
 report = data.profile_report(title='Data profile',
@@ -225,5 +251,5 @@ report = data.profile_report(title='Data profile',
                              config_file=op.join(
                                  defaults.processing, 'profiler-config.yaml'),
                              )
-report.to_file(op.join(defaults.payload, 'Avg_roi_degree_asost1.html'))
+report.to_file(op.join(defaults.payload, 'data_profile.html'))
 # %%

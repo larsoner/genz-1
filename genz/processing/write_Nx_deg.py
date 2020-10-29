@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
 """Compute narrow-band envelope correlation matrices
-For each subject, epoch raw into 5 sec trials, compute erm covariance,
-use Autoreject to clean up wide band epoched data. For each discrete frequency band
-regularize covariance, compute inverse, compute pairwise power correlation between ROI 
-label timeseries extracted from Freesurfer aparc_sub ROIs.
+For each subject, epoch raw MEG into 5 sec. long arbitrary trials, 
+use Autoreject to clean up wide band epoched data. Compute erm covariances.
+For each frequency band regularize data covariance, compute inverse, 
+compute pairwise power envelope correlation between FS aparc_sub ROI labels.
 """
 
 import os
 import os.path as op
-
+import warnings
+            
 import matplotlib.pyplot as plt
 import mne
 import numpy as np
@@ -20,6 +21,11 @@ from meeg_preprocessing import config, utils
 from mne import compute_raw_covariance
 from mne.connectivity import envelope_correlation
 from mne.filter import next_fast_len
+from autoreject import AutoReject
+from meeg_preprocessing import config
+from mne import read_epochs
+from mne.cov import regularize
+from mne.minimum_norm import make_inverse_operator, apply_inverse_epochs
 from mnefun import get_fsaverage_medial_vertices
 
 from genz import defaults, funcs
@@ -40,12 +46,12 @@ dups = df[df.duplicated("id")].index.values.tolist()
 df.drop(df.index[dups], inplace=True)
 df.drop(df[df.id.isin(defaults.exclude)].index, inplace=True)
 df = df.dropna(how="all")
-fslabels = mne.read_labels_from_annot(
+rois = mne.read_labels_from_annot(
     "fsaverage", "aparc_sub", "both", subjects_dir=defaults.subjects_dir
 )
-fslabels = [label for label in fslabels if not label.name.startswith("unknown")]
-label_nms = [rr.name for rr in fslabels]
-n = len(label_nms)
+rois = [roi for roi in rois if not roi.name.startswith("unknown")]
+roi_nms = [rr.name for rr in rois]
+n = len(roi_nms)
 data = np.zeros((len(df), len(defaults.bands), n))
 ###start subject loop
 for si, ss in enumerate(df.id.values):
@@ -100,26 +106,64 @@ for si, ss in enumerate(df.id.values):
     ###start bands loop
     for ix, (kk, vv) in enumerate(defaults.bands.items()):
         hp, lp = vv
-        label_ts = funcs.extract_labels_timeseries(
-            subject,
-            raw,
-            hp,
-            lp,
-            cov,
-            fwd,
-            defaults.subjects_dir,
-            eps_fname,
-            fslabels,
-            return_generator=True,
-        )
+        # epoch raw into 5 sec trials
+        events = mne.make_fixed_length_events(raw, duration=5.)
+        epochs = mne.Epochs(raw, events=events, tmin=0, tmax=5.,
+                            baseline=None, reject=None, preload=True)
+        if not op.isfile(eps_fname):
+            # k-fold CV thresholded artifact rejection
+            ar = AutoReject()
+            epochs = ar.fit_transform(epochs)
+            print('      \nSaving ...%s' % op.relpath(eps_fname,
+                                                    defaults.megdata))
+            epochs.save(eps_fname, overwrite=True)
+        epochs = read_epochs(eps_fname)
+        print('%d, %d (Epochs, drops)' %
+            (len(events), len(events) - len(epochs.selection)))
+        #epochs.plot_psd()
+        roi_nms = np.setdiff1d(np.arange(len(events)), epochs.selection)
+        # raw = raw.copy().filter(lf, hf, fir_window='blackman',
+        #                       method='iir', n_jobs=config.N_JOBS)
+        iir_params = dict(order=4, ftype='butter', output='sos')
+        epochs_ = epochs.copy().filter(hp, lp, method='iir',
+                                    iir_params=iir_params,
+                                    n_jobs=config.N_JOBS)
+        # epochs_.plot_psd(average=True, spatial_colors=False)
+        mne.Info.normalize_proj(epochs_.info)
+        # epochs_.plot_projs_topomap()
+        # regularize covariance
+        # rank = compute_rank(cov, rank='full', info=epochs_.info)
+        cov = regularize(cov, raw.info)
+        inv = make_inverse_operator(epochs_.info, fwd, cov)
+        # Compute label time series and do envelope correlation
+        stcs = apply_inverse_epochs(epochs_, inv, lambda2=1. / 9.,
+                                    pick_ori='normal',
+                                    return_generator=True)
+        morphed = mne.morph_labels(rois, subject,
+                                subjects_dir=defaults.subjects_dir)
+        label_ts = mne.extract_label_time_course(stcs, morphed, fwd['src'],
+                                            return_generator=True,
+                                            verbose=True)
         aec = envelope_correlation(label_ts)
-        assert aec.shape == (len(fslabels), len(fslabels))
+        assert aec.shape == (len(rois), len(rois))
         _, deg = csgraph.laplacian(aec, return_diag=True)
         ###############ref Cedric & Stack#############
         data[si, ix] = deg
-foo = funcs.expand_grid({"id": df.id.values, "freq": defaults.bands, "roi": label_nms})
+        threshold_prop = 0.15  # percentage of strongest edges to keep in the graph
+        degree = mne.connectivity.degree(aec, threshold_prop=threshold_prop)
+        if not np.allclose(deg, degree):
+            warnings.warn('mne.connectivity.degree NOT equal to csgraph.laplacian')
+        stc = mne.labels_to_stc(rois, degree)
+        stc = stc.in_label(mne.Label(inv['src'][0]['vertno'], hemi='lh') +
+                        mne.Label(inv['src'][1]['vertno'], hemi='rh'))
+        brain = stc.plot(
+            clim=dict(kind='percent', lims=[75, 85, 95]), colormap='gnuplot',
+            subjects_dir=defaults.subjects_dir, views='dorsal', hemi='both',
+            smoothing_steps=25, time_label='%s band' % kk)
+        brain.savefig(op.join(defaults.payload, 'degree-%s.png' % kk))
+foo = funcs.expand_grid({"id": df.id.values, "freq": defaults.bands, "roi": roi_nms})
 foo["deg"] = pd.Series(data.flatten())
-foo.to_csv(op.join(defaults.payload, "nxLaplnsXroi-tidy.csv"))
+foo.to_csv(op.join(defaults.payload, "degree_x_frequency-roi.csv"))
 # bar = foo.pivot_table("deg", "id", ["freq", "roi"], aggfunc="first").to_csv(
 #     op.join(defaults.payload, "nxLaplnsXroi-wide.csv")
 # )
