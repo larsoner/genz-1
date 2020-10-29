@@ -150,18 +150,32 @@ for si, ss in enumerate(df.id.values):
         ###############ref Cedric & Stack#############
         data[si, ix] = deg
         threshold_prop = 0.15  # percentage of strongest edges to keep in the graph
+<<<<<<< HEAD
         degree = mne.connectivity.degree(aec, threshold_prop=threshold_prop)
         if not np.allclose(deg, degree):
             warnings.warn('mne.connectivity.degree NOT equal to csgraph.laplacian')
         stc = mne.labels_to_stc(rois, degree)
+=======
+        degree = mne.connectivity.degree(corr, threshold_prop=threshold_prop)
+        if not np.allclose(deg, degree):
+            warnings.warn('mne.connectivity.degree NOT equal to csgraph.laplacian')
+        stc = mne.labels_to_stc(labels, degree)
+>>>>>>> cf4b12c14e3f5556241a9a743f259724aac9308f
         stc = stc.in_label(mne.Label(inv['src'][0]['vertno'], hemi='lh') +
                         mne.Label(inv['src'][1]['vertno'], hemi='rh'))
         brain = stc.plot(
             clim=dict(kind='percent', lims=[75, 85, 95]), colormap='gnuplot',
+<<<<<<< HEAD
             subjects_dir=defaults.subjects_dir, views='dorsal', hemi='both',
             smoothing_steps=25, time_label='%s band' % kk)
         brain.savefig(op.join(defaults.payload, 'degree-%s.png' % kk))
 foo = funcs.expand_grid({"id": df.id.values, "freq": defaults.bands, "roi": roi_nms})
+=======
+            subjects_dir=subjects_dir, views='dorsal', hemi='both',
+            smoothing_steps=25, time_label='%s band' % kk)
+        brain.savefig(op.join(defaults.payload, 'degree-%s.png' % kk))
+foo = funcs.expand_grid({"id": df.id.values, "freq": defaults.bands, "roi": label_nms})
+>>>>>>> cf4b12c14e3f5556241a9a743f259724aac9308f
 foo["deg"] = pd.Series(data.flatten())
 foo.to_csv(op.join(defaults.payload, "degree_x_frequency-roi.csv"))
 # bar = foo.pivot_table("deg", "id", ["freq", "roi"], aggfunc="first").to_csv(
