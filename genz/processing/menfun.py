@@ -16,7 +16,8 @@ params = mnefun.Params(n_jobs=18,
                        tmin=-.2, tmax=.2)
 
 # write prebads
-picks = pd.read_csv('/home/ktavabi/Github/genz/static/picks.csv' usecols=['id', 'badChs'])
+picks = pd.read_csv('/home/ktavabi/Github/genz/static/picks.csv',
+                    usecols=['id', 'badChs'])
 exclude = ['104_9a',  # Too few EOG events
            '108_9a',  # Fix
            '113_9a',  # Too few ECG events

@@ -27,9 +27,7 @@ exclude = ['104_9a',  # Too few EOG events
            '527_17a']  # Too few EOG events
 
 # frequencies of interest
-bands = {
-    'DC': (0.01, 2), 'delta': (2, 4), 'theta': (5, 7),
-    'alpha': (8, 12), 'beta': (13, 29), 'gamma': (30, 80)
+bands = {'beta': (13, 29), 'gamma': (30, 80)
     }
 
 # ages
