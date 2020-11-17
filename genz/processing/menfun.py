@@ -18,15 +18,7 @@ params = mnefun.Params(n_jobs=18,
 # write prebads
 picks = pd.read_csv('/home/ktavabi/Github/genz/static/picks.csv',
                     usecols=['id', 'badChs'])
-exclude = ['104_9a',  # Too few EOG events
-           '108_9a',  # Fix
-           '113_9a',  # Too few ECG events
-           '115_9a',  # no cHPI
-           '209_11a',  # Too few EOG events
-           '231_11a',  # twa_hp calc fail with assertion error
-           '432_15a',  # Too few ECG events
-           '510_17a',  # Too few ECG events
-           '527_17a']  # Too few EOG events
+
 picks.drop(picks[picks.id.isin(exclude)].index, inplace=True)
 picks.sort_values(by='id', inplace=True)
 picks = picks[picks.id.isin(['110_9a', '123_9a'])]

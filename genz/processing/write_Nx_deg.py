@@ -13,7 +13,6 @@ import warnings
 
 import matplotlib.pyplot as plt
 import mne
-from mne.label import labels_to_stc
 import numpy as np
 import pandas as pd
 from autoreject import AutoReject
@@ -23,6 +22,7 @@ from mne import compute_raw_covariance, read_epochs
 from mne.connectivity import envelope_correlation
 from mne.cov import regularize
 from mne.filter import next_fast_len
+from mne.label import labels_to_stc
 from mne.minimum_norm import apply_inverse_epochs, make_inverse_operator
 from mnefun import get_fsaverage_medial_vertices
 from scipy.sparse import csgraph
@@ -43,7 +43,7 @@ dups = df[df.duplicated("id")].index.values.tolist()
 df.drop(df.index[dups], inplace=True)
 df.drop(df[df.id.isin(defaults.exclude)].index, inplace=True)
 df = df.dropna(how="any")
-df.sample(2)
+# df = df.sample(5)
 rois = mne.read_labels_from_annot(
     "fsaverage", "aparc_sub", "both", subjects_dir=defaults.subjects_dir
 )
@@ -154,13 +154,12 @@ for si, ss in enumerate(df.id.values):
         )
         aec = envelope_correlation(label_ts)
         assert aec.shape == (len(rois), len(rois))
-        _, deg = csgraph.laplacian(aec, return_diag=True)
+        _, deg_lap = csgraph.laplacian(aec, return_diag=True)
         ###############ref Cedric & Stack#############
-        data[si, ix] = deg
-        threshold_prop = 0.15  # percentage of strongest edges to keep in thegraph
-        degree = mne.connectivity.degree(aec, threshold_prop=threshold_prop)
-        if not np.allclose(deg, degree):
-            warnings.warn("mne.connectivity.degree NOT equal to laplacian")
+        data[si, ix] = deg_lap
+        degree = mne.connectivity.degree(aec, threshold_prop=0.2)
+        # if not np.allclose(deg_lap, degree):
+        #     warnings.warn("mne.connectivity.degree NOT equal to laplacian")
         stc = mne.labels_to_stc(rois, degree)
         stc = stc.in_label(
             mne.Label(inv["src"][0]["vertno"], hemi="lh")
@@ -175,29 +174,33 @@ for si, ss in enumerate(df.id.values):
         a_lst[kk].append(morph.apply(stc))
     A_lst.append(a_lst)
 arrayostcs = np.array([[v[ii] for ii in defaults.bands] for v in A_lst]).squeeze()
+src = mne.read_source_spaces(
+    op.join(defaults.subjects_dir, "fsaverage", "bem", "fsaverage-oct6-src.fif")
+)
 vertices_to = [np.arange(10242)] * 2
+
 for ix, (kk, vv) in enumerate(defaults.bands.items()):
     grab = arrayostcs[:, ix]
     values = np.average([s.data for s in grab], axis=0)
-    # stc = mne.labels_to_stc(rois, values)
-    # stc = stc.in_label(mne.Label(inv['src'][0]['vertno'], hemi='lh') +
-    #               mne.Label(inv['src'][1]['vertno'], hemi='rh'))
     this_stc = mne.SourceEstimate(values, vertices_to, tstep=0, tmin=0)
+    this_stc = this_stc.in_label(
+        mne.Label(src[0]["vertno"], hemi="lh") + mne.Label(src[1]["vertno"], hemi="rh")
+    )
     brain = this_stc.plot(
         subject="fsaverage",
-        # clim=dict(kind="percent", lims=[75, 85, 95]),
+        clim=dict(kind="percent", lims=[75, 85, 95]),
         colormap="gnuplot",
         subjects_dir=defaults.subjects_dir,
         views="dorsal",
         hemi="both",
         smoothing_steps=25,
-        # time_label="%s band" % kk,
+        time_label="%s band" % kk,
     )
-    brain.save_image(op.join(defaults.payload, "degree-%s.png" % kk))
+    brain.save_image(op.join(defaults.payload, "%s-nxDegree-group-roi.png" % kk))
 
 foo = funcs.expand_grid({"id": df.id.values, "freq": defaults.bands, "roi": roi_nms})
 foo["deg"] = pd.Series(data.flatten())
-foo.to_csv(op.join(defaults.payload, "degree_x_frequency-roi.csv"))
+foo.to_csv(op.join(defaults.payload, "nxLaplacian-roi.csv"))
 # bar = foo.pivot_table("deg", "id", ["freq", "roi"], aggfunc="first").to_csv(
 #     op.join(defaults.payload, "nxLaplnsXroi-wide.csv")
 # )
