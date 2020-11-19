@@ -116,26 +116,13 @@ crashlytics-build.properties
 fabric.properties
 .idea/httpRequests
 .idea/caches/build_file_checksums.ser
-genz/.idea/
-genz/figures/
-!/genz/data/
-!/genz/figures/
 
-.idea/
-
-# Atom
 .ropeproject/
-
 .vscode/settings.json
 data/*.mat
-/genz/data/
+/genz/static
 *.m~
-/genz/processing/*.m~
-
-# Project data
 *.h5
-
-genz/genz.code-workspace
-demografix_ASOSt1_profile.html
-genz/.vscode/settings.json
-genz/processing/tempCodeRunnerFile.py
+.vscode/
+genz.code-workspace
+tempCodeRunnerFile.py
