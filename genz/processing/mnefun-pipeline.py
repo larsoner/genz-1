@@ -1,29 +1,41 @@
 #!/usr/bin/env python
+# Authors: Kambiz Tavabi <ktavabi@gmail.com>
+#
+# License: MIT
 
-"""Adolescent resting state MEG data MNEFUN processing pipeline."""
+"""Raw MEG data preprocessing script for resting state component of Adolescent project. Pipeline does..
+        1. write MNEFUN prebads for ACQ file
+        2. process ACQ file as per MNEFUN:PARAMS"""
 
 import os.path as op
 
 import mnefun
 import numpy as np
 import pandas as pd
-
+from genz import defaults
+# TO METHODS
 params = mnefun.Params(n_jobs=18,
                        decim=1, proj_sfreq=500,
                        n_jobs_fir='cuda', n_jobs_resample='cuda',
                        filter_length='auto', lp_cut=100.,
                        lp_trans='auto', bem_type='5120',
                        tmin=-.2, tmax=.2)
-
-# write prebads
-picks = pd.read_csv('/home/ktavabi/Github/genz/static/picks.csv',
-                    usecols=['id', 'badChs'])
-
-picks.drop(picks[picks.id.isin(exclude)].index, inplace=True)
-picks.sort_values(by='id', inplace=True)
-picks = picks[picks.id.isin(['110_9a', '123_9a'])]
-for si, subj in enumerate(picks.id.values):
-    subj = 'genz%s' % subj
+## TODO:refactor to YAML ##
+dfs = []
+for ag in [9, 11, 13, 15, 17]:
+    fi = op.join(defaults.static, "GenZ_subject_information - %da group.tsv" % ag)
+    dfs.append(pd.read_csv(fi, sep="\t", usecols=["Subject Number", "Sex"]))
+df = pd.concat(dfs)
+df.columns = ["id", "sex"]
+df.sort_values(by="id")
+dups = df[df.duplicated("id")].index.values.tolist()
+df.drop(df.index[dups], inplace=True)
+df.drop(df[df.id.isin(defaults.exclude)].index, inplace=True)
+df = df.dropna(how="all")
+picks = [sid.lower() for sid in df.id.values]
+###### write prebads
+for si, subj in enumerate(df.id.values):
+    subj = subj.lower()
     if op.exists(op.join(params.work_dir, subj, 'raw_fif')):
         prebad_file = op.join(params.work_dir, subj,
                               'raw_fif', '%s_prebad.txt' % subj)
@@ -41,7 +53,7 @@ for si, subj in enumerate(picks.id.values):
                     for ch_name in picks.iloc[si].badChs.split(sep=','):
                         output.write("MEG%s\n" % ''.join(ch_name.split()))
 
-params.subjects = ['genz%s' % cc for cc in picks.id.values]
+params.subjects = picks
 params.subject_indices = np.setdiff1d(np.arange(len(params.subjects)),
                                       np.array([3]))
 params.dates = [None] * len(params.subjects)

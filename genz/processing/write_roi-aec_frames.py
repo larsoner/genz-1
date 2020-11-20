@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 
 """Compute narrow-band envelope correlation matrices
-For each subject, epoch raw MEG into 5 sec. long arbitrary trials, 
-use Autoreject to clean up wide band epoched data. Compute erm covariances.
-For each frequency band regularize data covariance, compute inverse, 
-compute pairwise power envelope correlation between FS aparc_sub ROI labels.
+For each subject, epoch raw .fif resting state into 5 sec. long arbitrary trials data cleaned-up using Autoreject. Do source imaging using ERM SSP,  for each bandwidth (n=7) compute regularized ROI AEC covariance array.
 """
 
 import os
@@ -32,6 +29,8 @@ new_sfreq = defaults.new_sfreq
 n_fft = next_fast_len(int(round(4 * new_sfreq)))
 lims = [75, 85, 95]
 medial_verts = get_fsaverage_medial_vertices()
+
+## TODO:refactor to YAML ##
 dfs = []
 for ag in [9, 11, 13, 15, 17]:
     fi = op.join(defaults.static, "GenZ_subject_information - %da group.tsv" % ag)

@@ -1,8 +1,11 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# Authors: Kambiz Tavabi <ktavabi@gmail.com>
+#
+# License: MIT
 
 """Global study parameters."""
-
+# TODO convert to YAML
+ 
 from os import path as op
 from pathlib import Path
 
@@ -192,14 +195,3 @@ include = [
     "531_17a",
     "532_17a",
 ]  # List compiled by Erica Peterson
-
-exclude = [
-    "104_9a",  # Too few EOG events
-    "108_9a",  # Fix
-    "113_9a",  # Too few ECG events
-    "115_9a",  # no cHPI
-    "209_11a",  # Too few EOG events
-    "231_11a",  # twa_hp calc fail with assertion error
-    "432_15a",  # Too few ECG events
-    "510_17a",
-]
