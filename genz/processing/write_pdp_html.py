@@ -1,21 +1,25 @@
-# %%
+#!/usr/bin/env python
+# Authors: Kambiz Tavabi <ktavabi@gmail.com>
+#
+# License: MIT
+
+"""Raw MEG data preprocessing script for resting state component of Adolescent project. Pipeline does..
+        1. write MNEFUN prebads for ACQ file
+        2. process ACQ file as per MNEFUN:PARAMS"""
+
 import os.path as op
 
+import janitor  # noqa
 import matplotlib.pyplot as plt
-
 import numpy as np
 import pandas as pd
-import pandas_flavor as pf
-import janitor
-
+import pandas_flavor as pf  # noqa
 import seaborn as sns
-import xarray as xr
 from genz import defaults
 from numpy import mean, std
 from pandas_profiling import ProfileReport
 from sklearn import datasets, svm
 from sklearn.compose import make_column_transformer
-from sklearn.experimental import enable_hist_gradient_boosting  # noqa
 from sklearn.ensemble import (HistGradientBoostingRegressor,
                               RandomForestRegressor, StackingRegressor)
 from sklearn.experimental import enable_hist_gradient_boosting  # noqa
