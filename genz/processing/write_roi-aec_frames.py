@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Compute narrow-band envelope correlation matrices
+"""Compute narrow-band functional connectomes
 For each subject, epoch raw .fif resting state into 5 sec. long arbitrary trials data cleaned-up using Autoreject. Do source imaging using ERM SSP,  for each bandwidth (n=7) compute regularized ROI AEC covariance array.
 """
 
@@ -30,7 +30,7 @@ n_fft = next_fast_len(int(round(4 * new_sfreq)))
 lims = [75, 85, 95]
 medial_verts = get_fsaverage_medial_vertices()
 
-## TODO:refactor to YAML ##
+# TODO refactor to YAML
 dfs = []
 for ag in [9, 11, 13, 15, 17]:
     fi = op.join(defaults.static, "GenZ_subject_information - %da group.tsv" % ag)
@@ -51,6 +51,7 @@ roi_nms = [rr.name for rr in rois]
 n = len(roi_nms)
 data = np.zeros((len(df), len(defaults.bands), n))
 A_lst = list()
+
 ###start subject loop
 for si, ss in enumerate(df.id.values):
     subject = ss.replace("GenZ_", "genz")
@@ -86,6 +87,7 @@ for si, ss in enumerate(df.id.values):
     raw_erm.load_data().resample(new_sfreq, n_jobs=config.N_JOBS)
     raw_erm.add_proj(raw.info["projs"])
     # ERM covariance
+    # TODO confirm covariance computed without rank warnings
     cov = compute_raw_covariance(
         raw_erm,
         n_jobs=config.N_JOBS,
@@ -102,7 +104,8 @@ for si, ss in enumerate(df.id.values):
     # epoch raw into 5 sec trials
     print("      \nLoading ...%s" % op.relpath(eps_fname, defaults.megdata))
     print(subject)
-    # start Nx loop
+    
+    # start network loop
     a_lst = dict()
     for ix, (kk, vv) in enumerate(defaults.bands.items()):
         hp, lp = vv
@@ -140,22 +143,29 @@ for si, ss in enumerate(df.id.values):
         # epochs_.plot_psd(average=True, spatial_colors=False)
         mne.Info.normalize_proj(epochs_.info)
         # epochs_.plot_projs_topomap()
+        
         # regularize covariance
         # rank = compute_rank(cov, rank='full', info=epochs_.info)
         cov = regularize(cov, raw.info)
         inv = make_inverse_operator(epochs_.info, fwd, cov)
-        # Compute label time series and do envelope correlation
+        
+        # Compute ROI time series and do envelope correlation
         stcs = apply_inverse_epochs(
             epochs_, inv, lambda2=1.0 / 9.0, pick_ori="normal", return_generator=True
         )
         label_ts = mne.extract_label_time_course(
             stcs, rois, fwd["src"], return_generator=True, verbose=True
         )
+
+        # compute ROI level envelop power
         aec = envelope_correlation(label_ts)
         assert aec.shape == (len(rois), len(rois))
+        # compute ROI laplacian as per Ginset 
+        # TODO cite paper
         _, deg_lap = csgraph.laplacian(aec, return_diag=True)
-        ###############ref Cedric & Stack#############
-        data[si, ix] = deg_lap
+            data[si, ix] = deg_lap 
+        
+        # compute ROI degree
         degree = mne.connectivity.degree(aec, threshold_prop=0.2)
         # if not np.allclose(deg_lap, degree):
         #     warnings.warn("mne.connectivity.degree NOT equal to laplacian")
@@ -172,12 +182,14 @@ for si, ss in enumerate(df.id.values):
         )
         a_lst[kk].append(morph.apply(stc))
     A_lst.append(a_lst)
+
 arrayostcs = np.array([[v[ii] for ii in defaults.bands] for v in A_lst]).squeeze()
 src = mne.read_source_spaces(
     op.join(defaults.subjects_dir, "fsaverage", "bem", "fsaverage-oct6-src.fif")
 )
 vertices_to = [np.arange(10242)] * 2
 
+# visualize connectivity on fsaverage
 for ix, (kk, vv) in enumerate(defaults.bands.items()):
     grab = arrayostcs[:, ix]
     values = np.average([s.data for s in grab], axis=0)
@@ -197,6 +209,7 @@ for ix, (kk, vv) in enumerate(defaults.bands.items()):
     )
     brain.save_image(op.join(defaults.payload, "%s-nxDegree-group-roi.png" % kk))
 
+# write out NxROI laplacian to tidy CSV
 foo = funcs.expand_grid({"id": df.id.values, "freq": defaults.bands, "roi": roi_nms})
 foo["deg"] = pd.Series(data.flatten())
 foo.to_csv(op.join(defaults.payload, "nxLaplacian-roi.csv"))
