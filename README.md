@@ -1,6 +1,6 @@
 # Adolescent resting state MEG
 
-[ILABS](www.ilabs.uw.edu) CNS resting-state magnetoencephalography component of multimodal neuroimaging, personlity, and cognition measurements across adolescence.
+[ILABS](www.ilabs.uw.edu) CNS resting-state magnetoencephalography component of multimodal neuroimaging, personality, and cognition measurements across adolescence.
 
 ## Run
 
