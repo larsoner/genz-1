@@ -100,7 +100,6 @@ params.report_params.update(
         psd=True,  # often slow
         ssp=True,
         source_alignment=True
-        
         )
 mnefun.do_processing(
         params,

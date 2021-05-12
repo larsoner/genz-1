@@ -15,14 +15,15 @@ static = op.join(Path(__file__).parents[0], "static")
 processing = op.join(Path(__file__).parents[0], "processing")
 payload = op.join(Path(__file__).parents[0], "payload")
 archive = op.join(Path(__file__).parents[0], "archive")
-megdata = "/media/ktavabi/ALAYA/data/ilabs/genz_resting"
-subjects_dir = "/media/ktavabi/ALAYA/data/freesurfer"
+megdata = "/Users/ktavabi/MEG/genz"
+subjects_dir = "/Users/ktavabi/freesurfer"
 exclude = [  # these are unusable
     "113_9a",  # unusable
     "115_9a",  # missing resting recording
     "318_13a",  # missing resting recording
     "319_13a",  # unusable
 ]
+n_jobs = 'cuda'
 # frequencies of interest
 bands = {
     "DC": (0, 1.9),
@@ -38,6 +39,9 @@ ages = np.arange(9, 19, 2)
 
 # Down sample data to
 new_sfreq = 250.0
+
+#
+cmap_limits = [75, 85, 95]
 
 # Subjects with MEG data ACQ
 include = [
