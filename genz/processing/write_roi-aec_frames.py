@@ -57,42 +57,45 @@ src_fs = mne.read_source_spaces(
         defaults.subjects_dir, "fsaverage", "bem", "fsaverage-ico-5-src.fif"
     )
 )
-state = 'task'  # task
-if state == 'task':
+state = "task"  # task/rest
+if state == "task":
     p = mnefun.Params()
     p.work_dir = defaults.megdata
-    p.sss_fif_tag = '_raw_sss.fif'
-    p.run_names = ['faces_learn_01', 'thumbs_learn_01', 'emojis_learn_01',
-                   'faces_test_01', 'thumbs_test_01', 'emojis_test_01']
-    p.lp_cut=80
+    p.sss_fif_tag = "_raw_sss.fif"
+    p.run_names = [
+        "%s_faces_learn_01",
+        "%s_thumbs_learn_01",
+        "%s_emojis_learn_01",
+        "%s_faces_test_01",
+        "%s_thumbs_test_01",
+        "%s_emojis_test_01",
+    ]
+    p.lp_cut = 80
 
-# start subject loop
+# Subject loop
 for si, ss in enumerate(df.id.values):
     subject = f"genz{ss}"
     del ss
     subj_dir = os.path.join(defaults.megdata, subject)
     inv_fname = os.path.join(subj_dir, "inverse", f"{subject}-meg-erm-inv.fif")
-    raw_fname = os.path.join(
-        subj_dir, "sss_pca_fif", f"{subject}_rest_01_allclean_fil80_raw_sss.fif"
-    )
-    if state == 'task':
-        p.pca_dir = os.path.join(subj_dir, "sss_pca_fif")
-        raws = get_raw_fnames(p, subject, which='pca')
-        raw = _concat_resamp_raws(p, subject, raws)
-
-    src_dir = os.path.join(subj_dir, "source")
-    out_fname = os.path.join(src_dir, "envcorr.h5")
-    if op.isfile(out_fname):
-        data = h5io.read_hdf5(out_fname)
-        degree[si] = data["degree"]
-        deg_lap[si] = data["deg_lap"]
-        continue
-    print("Loading data for %s" % subject)
     # Load raw
-    try:
-        raw = mne.io.read_raw_fif(raw_fname)
-    except FileNotFoundError as e:
-        print(f"    File not found: {raw_fname}")
+    print("Loading data for %s" % subject)
+    if state == "task":
+        p.pca_dir = os.path.join(subj_dir, "sss_pca_fif")
+        raws = get_raw_fnames(p, subject, which="pca")
+        if len(raws) == 0:
+            continue
+        raw = _concat_resamp_raws(p, subject, raws)
+    else:
+        raw_fname = os.path.join(
+            subj_dir,
+            "sss_pca_fif",
+            f"{subject}_rest_01_allclean_fil80_raw_sss.fif",
+        )
+        try:
+            raw = mne.io.read_raw_fif(raw_fname)
+        except FileNotFoundError as e:
+            print(f"    File not found: {raw_fname}")
         continue
     # 0.1 should be okay for 5 sec epochs (envcorr will baseline correct
     # essentially because it's a correlation)
@@ -102,19 +105,25 @@ for si, ss in enumerate(df.id.values):
             f"({raw.info['highpass']})"
         )
         continue
+    raw.load_data()
+
+    src_dir = os.path.join(subj_dir, "source")
     if not os.path.exists(src_dir):
         os.mkdir(src_dir)
-    raw.load_data()
+    out_fname = os.path.join(src_dir, f"{state}_envcorr.h5")
+    if op.isfile(out_fname):
+        data = h5io.read_hdf5(out_fname)
+        degree[si] = data["degree"]
+        deg_lap[si] = data["deg_lap"]
+        continue
+
     # epoch raw into 5 sec trials
     print("    Loading epochs ...", end="")
-
-    # start network loop
     a_lst = dict()
-    # epoch raw into 5 sec trials
     events = mne.make_fixed_length_events(raw, duration=5.0)
     tmax = 5.0 - 1.0 / defaults.new_sfreq
     decim = 4
-    # first create originals to get drops
+    # first create originals to get drops via peak-to-peak rejection
     epochs = mne.Epochs(
         raw,
         events=events,
@@ -128,6 +137,7 @@ for si, ss in enumerate(df.id.values):
     assert epochs.info["sfreq"] == defaults.new_sfreq
     print(f" Dropped {len(events) - len(epochs)}/{len(events)} epochs")
     events = epochs.events
+    # Network loop
     for ix, (kk, vv) in enumerate(defaults.bands.items()):
         print(f'    Processing {"-".join(str(v) for v in vv)} Hz ...', end="")
         t0 = time.time()
@@ -214,12 +224,13 @@ for ix, (kk, vv) in enumerate(defaults.bands.items()):
         op.join(defaults.payload, "%s-nxDegree-group-roi.png" % kk)
     )
 
-# write out NxROI laplacian to tidy CSV
-foo = funcs.expand_grid(
+# write out network laplacian data
+laplacians = funcs.expand_grid(
     {"id": df.id.values, "freq": defaults.bands, "roi": roi_nms}
 )
-foo["deg"] = pd.Series(deg_lap.flatten())
-foo.to_csv(op.join(defaults.payload, "nxLaplacian-roi.csv"))
-# bar = foo.pivot_table("deg", "id", ["freq", "roi"], aggfunc="first").to_csv(
-#     op.join(defaults.payload, "nxLaplnsXroi-wide.csv")
-# )
+laplacians["nabla"] = pd.Series(deg_lap.flatten())
+laplacians.to_csv(
+    op.join(defaults.payload, f"{state}-Nx-ROI-Laplacians.csv")
+)  # TIDY
+# Wide
+# laplacians.pivot_table("deg", "id", ["freq", "roi"], aggfunc="first")
