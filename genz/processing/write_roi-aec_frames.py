@@ -21,6 +21,7 @@ from scipy.sparse import csgraph
 import mnefun
 from mnefun import get_raw_fnames
 from mnefun._epoching import _concat_resamp_raws
+
 dfs = []
 for ag in defaults.ages:
     fi = op.join(
@@ -85,7 +86,7 @@ for si, ss in enumerate(df.id.values):
         raws = get_raw_fnames(p, subject, which="pca")
         if len(raws) == 0:
             continue
-        raw = _concat_resamp_raws(p, subject, raws)
+        raw = _concat_resamp_raws(p, subject, raws)[0]
     else:
         raw_fname = os.path.join(
             subj_dir,
@@ -200,8 +201,11 @@ for si, ss in enumerate(df.id.values):
         # if not np.allclose(deg_lap, degree[si, ix]):
         #     warnings.warn("mne.connectivity.degree NOT equal to laplacian")
         print(f" Completed in {(time.time() - t0) / 60:0.1f} min")
-        h5io.write_hdf5(out_fname, dict(degree=degree[si], deg_lap=deg_lap[si]))
-vertices_to = [s["vertno"] for s in src_fs]
+        h5io.write_hdf5(
+            out_fname,
+            dict(degree=degree[si], deg_lap=deg_lap[si]),
+            overwrite=True,
+        )
 
 # visualize connectivity on fsaverage
 for ix, (kk, vv) in enumerate(defaults.bands.items()):
@@ -221,7 +225,7 @@ for ix, (kk, vv) in enumerate(defaults.bands.items()):
         time_label="%s band" % kk,
     )
     brain.save_image(
-        op.join(defaults.payload, "%s-nxDegree-group-roi.png" % kk)
+        op.join(defaults.payload, "%s-%s-nxDegree-group-roi.png" %(state, kk)
     )
 
 # write out network laplacian data

@@ -15,8 +15,9 @@ static = op.join(Path(__file__).parents[0], "static")
 processing = op.join(Path(__file__).parents[0], "processing")
 payload = op.join(Path(__file__).parents[0], "payload")
 archive = op.join(Path(__file__).parents[0], "archive")
-megdata = "/Users/ktavabi/MEG/genz"
-subjects_dir = "/Users/ktavabi/freesurfer"
+
+megdata = "/media/ktavabi/INDAR/data/ilabs/genz_resting/"
+subjects_dir ="/media/ktavabi/INDAR/data/ilabs/anatomy" 
 exclude = [  # these are unusable
     "113_9a",  # unusable
     "115_9a",  # missing resting recording
