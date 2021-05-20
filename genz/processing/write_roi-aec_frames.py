@@ -58,7 +58,7 @@ src_fs = mne.read_source_spaces(
         defaults.subjects_dir, "fsaverage", "bem", "fsaverage-ico-5-src.fif"
     )
 )
-state = "task"  # task/rest
+state = "rest"  # task/rest
 if state == "task":
     p = mnefun.Params()
     p.work_dir = defaults.megdata
