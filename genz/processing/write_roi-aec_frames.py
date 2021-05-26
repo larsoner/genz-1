@@ -57,7 +57,7 @@ src_fs = mne.read_source_spaces(
         defaults.subjects_dir, "fsaverage", "bem", "fsaverage-ico-5-src.fif"
     )
 )
-state = "rest"  # task/rest
+state = "task"  # task/rest
 if state == "task":
     p = mnefun.Params()
     p.work_dir = defaults.megdata
@@ -79,11 +79,23 @@ for si, ss in enumerate(df.id.values):
     subj_dir = os.path.join(defaults.megdata, subject)
     inv_fname = os.path.join(subj_dir, "inverse", f"{subject}-meg-erm-inv.fif")
     # Load raw
-    print("Loading data for %s" % subject)
+    print("Loading data for %s ..." % subject, end='')
+    src_dir = os.path.join(subj_dir, "source")
+    if not os.path.exists(src_dir):
+        os.mkdir(src_dir)
+    out_fname = os.path.join(src_dir, f"{state}_envcorr.h5")
+    if op.isfile(out_fname):
+        data = h5io.read_hdf5(out_fname)
+        degree[si] = data["degree"]
+        laplacian[si] = data["laplacian"]
+        print(' previous run data used')
+        continue
+
     if state == "task":
-        p.pca_dir = os.path.join(subj_dir, "sss_pca_fif")
+        p.pca_dir =  "sss_pca_fif"
         raws = get_raw_fnames(p, subject, which="pca")
         if len(raws) == 0:
+            print(' No raws found')
             continue
         raw = _concat_resamp_raws(p, subject, raws)[0]
     else:
@@ -94,30 +106,18 @@ for si, ss in enumerate(df.id.values):
         )
         try:
             raw = mne.io.read_raw_fif(raw_fname)
-        except FileNotFoundError as e:
-            print(f"    File not found: {raw_fname}")
-        continue
+        except FileNotFoundError:
+            print(f" File not found: {raw_fname}")
+            continue
     # 0.1 should be okay for 5 sec epochs (envcorr will baseline correct
     # essentially because it's a correlation)
     if raw.info["highpass"] > 0.11:
-        print(
-            f"{subject} acquisition HP greater than 0.1 Hz "
-            f"({raw.info['highpass']})"
-        )
+        print(f" acquisition HP greater than 0.1 Hz ({raw.info['highpass']})")
         continue
     raw.load_data()
-    src_dir = os.path.join(subj_dir, "source")
-    if not os.path.exists(src_dir):
-        os.mkdir(src_dir)
-    out_fname = os.path.join(src_dir, f"{state}_envcorr.h5")
-    if op.isfile(out_fname):
-        data = h5io.read_hdf5(out_fname)
-        degree[si] = data["degree"]
-        laplacian[si] = data["laplacian"]
-        continue
 
     # epoch raw into 5 sec trials
-    print("    Loading epochs ...", end="")
+    print(" Loading epochs ...", end="")
     a_lst = dict()
     events = mne.make_fixed_length_events(raw, duration=5.0)
     tmax = 5.0 - 1.0 / defaults.new_sfreq
@@ -159,6 +159,7 @@ for si, ss in enumerate(df.id.values):
             tmax=tmax,
             baseline=None,
             reject=None,
+            flat=dict(grad=1e-13, mag=1e-15),
             preload=True,
             decim=decim,
         )
