@@ -17,7 +17,7 @@ payload = op.join(Path(__file__).parents[0], "payload")
 archive = op.join(Path(__file__).parents[0], "archive")
 
 megdata = "/media/ktavabi/INDAR/data/ilabs/genz_resting/"
-subjects_dir ="/media/ktavabi/INDAR/data/ilabs/anatomy" 
+subjects_dir = "/media/ktavabi/INDAR/data/ilabs/anatomy"
 exclude = [  # these are unusable
     "113_9a",  # unusable
     "115_9a",  # missing resting recording

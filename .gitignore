@@ -126,3 +126,4 @@ data/*.mat
 .Rhistory
 genz.code-workspace
 tempCodeRunnerFile.py
+genz/sync-datasets.sh

@@ -1,5 +1,0 @@
-#!/bin/bash -ef
-rsync -a --prune-empty-dirs --partial --progress --include="genz*/" --include="*/sss_pca_fif/" --include="*/sss_pca_fif/*_rest*_raw_sss.fif" --include="*/inverse/" --include="*/inverse/*erm*-inv*.fif" --exclude="*" ktavabi@drake.ilabs.uw.edu:/storage/genz_active/t1/twa_hp/ /media/ktavabi/INDAR/data/ilabs/genz_resting/
-SUBJECT=genz*_*a
-ROOT=subjects
-rsync -a --partial --progress --include="${ROOT}" --include="${ROOT}/${SUBJECT}" --include="${ROOT}/${SUBJECT}/surf/" --include="${ROOT}/${SUBJECT}/surf/*.sphere*" --include="${ROOT}/${SUBJECT}/surf/*.white" ktavabi@drake:/storage/anat/SUBJECT${ROOT} /media/ktavabi/ALAYA/data/freesurfer/

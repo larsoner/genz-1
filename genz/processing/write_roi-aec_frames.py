@@ -21,7 +21,6 @@ from scipy.sparse import csgraph
 import mnefun
 from mnefun import get_raw_fnames
 from mnefun._epoching import _concat_resamp_raws
-
 dfs = []
 for ag in defaults.ages:
     fi = op.join(
@@ -49,8 +48,8 @@ all_rois = mne.read_labels_from_annot(
 rois = [roi for roi in all_rois if not roi.name.startswith("unknown")]
 roi_nms = [rr.name for rr in rois]
 n = len(roi_nms)
-deg_lap = np.zeros((len(df), len(defaults.bands), n))
-degree = np.zeros_like(deg_lap)
+laplacian = np.zeros((len(df), len(defaults.bands), n))
+degree = np.zeros_like(laplacian)
 A_lst = list()
 reject = dict(grad=2000e-13, mag=6000e-15)  # same as GenZ repo
 src_fs = mne.read_source_spaces(
@@ -107,7 +106,6 @@ for si, ss in enumerate(df.id.values):
         )
         continue
     raw.load_data()
-
     src_dir = os.path.join(subj_dir, "source")
     if not os.path.exists(src_dir):
         os.mkdir(src_dir)
@@ -115,7 +113,7 @@ for si, ss in enumerate(df.id.values):
     if op.isfile(out_fname):
         data = h5io.read_hdf5(out_fname)
         degree[si] = data["degree"]
-        deg_lap[si] = data["deg_lap"]
+        laplacian[si] = data["laplacian"]
         continue
 
     # epoch raw into 5 sec trials
@@ -189,21 +187,21 @@ for si, ss in enumerate(df.id.values):
         print(" Envcorr ...", end="")
         aec = envelope_correlation(label_ts)
         assert aec.shape == (len(rois), len(rois))
-        # compute ROI laplacian as per:
+        # compute Nx laplacian as per:
         # Ginestet, C. E., Li, J., Balachandran, P., Rosenberg, S., &
         # Kolaczyk, E. D. (2017). Hypothesis testing for network data
         # in functional neuroimaging. Annals of Applied Statistics,
         # 11(2), 725–750. https://doi.org/10.1214/16-AOAS1015
-        _, deg_lap[si, ix] = csgraph.laplacian(aec, return_diag=True)
+        _, laplacian[si, ix] = csgraph.laplacian(aec, return_diag=True)
 
         # compute ROI degree
         degree[si, ix] = mne.connectivity.degree(aec, threshold_prop=0.2)
-        # if not np.allclose(deg_lap, degree[si, ix]):
+        # if not np.allclose(laplacian, degree[si, ix]):
         #     warnings.warn("mne.connectivity.degree NOT equal to laplacian")
         print(f" Completed in {(time.time() - t0) / 60:0.1f} min")
         h5io.write_hdf5(
             out_fname,
-            dict(degree=degree[si], deg_lap=deg_lap[si]),
+            dict(degree=degree[si], laplacian=laplacian[si]),
             overwrite=True,
         )
 
@@ -222,19 +220,20 @@ for ix, (kk, vv) in enumerate(defaults.bands.items()):
         time_viewer=False,
         show_traces=False,
         smoothing_steps="nearest",
-        time_label="%s band" % kk,
-    )
+        time_label="%s band" % kk)
     brain.save_image(
-        op.join(defaults.payload, "%s-%s-nxDegree-group-roi.png" %(state, kk)
-    )
+        op.join(defaults.payload, "%s-%s-nxDegree-group-roi.png" % (state, kk)))
 
-# write out network laplacian data
+# write out Nx Laplacian data
 laplacians = funcs.expand_grid(
     {"id": df.id.values, "freq": defaults.bands, "roi": roi_nms}
 )
-laplacians["nabla"] = pd.Series(deg_lap.flatten())
+laplacians["nabla"] = pd.Series(laplacian.flatten())
+# TIDY
 laplacians.to_csv(
     op.join(defaults.payload, f"{state}-Nx-ROI-Laplacians.csv")
-)  # TIDY
+)
 # Wide
 # laplacians.pivot_table("deg", "id", ["freq", "roi"], aggfunc="first")
+#        op.join(defaults.payload, "%s-nxDegree-group-roi.png" % kk)
+#    )
