@@ -155,7 +155,7 @@ for si, ss in enumerate(df.id.values):
         )
         epochs = mne.Epochs(
             raw_use,
-            events=epochs.events,
+            events=events,
             tmin=0,
             tmax=tmax,
             baseline=None,
