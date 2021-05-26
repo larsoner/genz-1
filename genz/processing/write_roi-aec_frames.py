@@ -121,7 +121,7 @@ for si, ss in enumerate(df.id.values):
     a_lst = dict()
     events = mne.make_fixed_length_events(raw, duration=5.0)
     tmax = 5.0 - 1.0 / defaults.new_sfreq
-    decim = 4
+    decim = int(round(raw.info['sfreq'] / defaults.new_sfreq))
     # first create originals to get drops via peak-to-peak rejection
     epochs = mne.Epochs(
         raw,
