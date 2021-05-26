@@ -160,7 +160,7 @@ for si, ss in enumerate(df.id.values):
             tmax=tmax,
             baseline=None,
             reject=None,
-            flat=dict(grad=1e-13, mag=1e-15),
+            flat=None,
             preload=True,
             decim=decim,
         )
