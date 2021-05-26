@@ -132,7 +132,7 @@ for si, ss in enumerate(df.id.values):
         reject=reject,
         flat=dict(grad=1e-13, mag=1e-15),
         preload=True,
-        decim=4,
+        decim=decim,
     )
     assert epochs.info["sfreq"] == defaults.new_sfreq
     print(f" Dropped {len(events) - len(epochs)}/{len(events)} epochs")
